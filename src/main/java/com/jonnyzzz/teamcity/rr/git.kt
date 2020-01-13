@@ -50,7 +50,7 @@ fun createRRBranch(): RRBranchInfo {
   println("Current state: $headCommit from branch $headName")
 
   val targetShortBranch = "$headName-${headCommit.take(8)}"
-  val targetBranchName = "refs/jonnyzzz-rr/$targetShortBranch"
+  val targetBranchName = "$customGitBranchNamePrefix/$targetShortBranch"
   exec(args = listOf(GIT_COMMAND, "push", "origin", "$headCommit:$targetBranchName"),
           timeout = 5,
           timeoutUnit = TimeUnit.MINUTES

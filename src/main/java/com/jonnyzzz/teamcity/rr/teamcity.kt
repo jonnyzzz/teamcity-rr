@@ -1,8 +1,11 @@
 package com.jonnyzzz.teamcity.rr
 
+import com.fasterxml.jackson.databind.ObjectMapper
 import org.jetbrains.teamcity.rest.TeamCityInstance
 import org.jetbrains.teamcity.rest.TeamCityInstanceFactory
 import java.io.File
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
 
 private fun readTeamCityAccessToken(): String {
   val tokenFile = File(System.getProperty("user.home"), ".teamcity-rr")
@@ -29,9 +32,25 @@ fun connectToTeamCity(): TeamCityInstance {
     )
     //test connection
     tc.rootProject()
-    println("OK!")
     return tc
   } catch (t: Throwable) {
     throw UserErrorException("Failed to connect to TeamCity to $teamCityURL. ${t.message}", t)
+  }
+}
+
+class TeamCityRRState(
+        private val branch: RRBranchInfo
+) {
+  fun toParameterString(): String {
+    val om = ObjectMapper()
+    val root = om.createObjectNode()
+    root.put("user", System.getProperty("user.name"))
+    root.put("commit", branch.commit)
+    root.put("date", DateTimeFormatter.ISO_DATE_TIME.format(LocalDateTime.now()))
+    root.put("full-branch", branch.fullName)
+    root.put("short-branch", branch.shortName)
+    root.put("local-branch", branch.originalBranchName)
+    root.put("rr-version", rrVersion)
+    return om.writerWithDefaultPrettyPrinter().writeValueAsString(root)
   }
 }

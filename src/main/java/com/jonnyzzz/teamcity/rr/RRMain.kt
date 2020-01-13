@@ -1,22 +1,25 @@
 package com.jonnyzzz.teamcity.rr
 
-import com.fasterxml.jackson.databind.ObjectMapper
 import org.apache.log4j.BasicConfigurator
 import org.apache.log4j.Level
 import org.apache.log4j.Logger
 import org.jetbrains.teamcity.rest.BuildConfigurationId
+import org.jetbrains.teamcity.rest.TestStatus
 import java.io.File
-import java.time.LocalDateTime
-import java.time.format.DateTimeFormatter
 import kotlin.system.exitProcess
 
 const val rrVersion = "0.0.42"
 const val teamCityURL = "https://buildserver.labs.intellij.net"
 const val customBranchParameter = "reverse.dep.*.intellij.platform.vcs.branch"
 const val customParameterMarker = "jonnyzzz.teamcity-rr-build"
+const val customGitBranchNamePrefix = "refs/jonnyzzz-rr"
+const val customTeamCityBranchNamePrefix = "jonnyzzz-rr/"
+const val customTeamCityTagName = "jonnyzzz-rr"
 
 val ijAggBuild = BuildConfigurationId("ijplatform_master_Idea_Tests_AggregatorJdk11")
 
+val WorkDir: File by lazy { File(".").canonicalFile }
+class UserErrorException(message: String, cause: Throwable? = null) : Exception(message, cause)
 
 object RRMain {
   private val LOG = Logger.getLogger(javaClass)
@@ -41,10 +44,6 @@ object RRMain {
   }
 }
 
-val WorkDir: File by lazy { File(".").canonicalFile }
-
-class UserErrorException(message: String, cause: Throwable? = null) : Exception(message, cause)
-
 private fun theMain(args: Array<String>) {
   println("TeamCity RR v$rrVersion by @jonnyzzz")
   println()
@@ -55,39 +54,61 @@ private fun theMain(args: Array<String>) {
     exitProcess(11)
   }
 
-  if (args.getOrNull(0).equals("run", ignoreCase = true)) {
-    checkGitVersion()
-    val branch = createRRBranch()
-
-    val tc = connectToTeamCity()
-
-    val build = tc.buildConfiguration(ijAggBuild)
-            .runBuild(
-                    parameters = mapOf(
-                            customBranchParameter to branch.fullName,
-                            customParameterMarker to TeamCityRRState(branch).toParameterString()
-                    ),
-                    personal = true,
-                    queueAtTop = true,
-                    logicalBranchName = "teamcity-rr/"
-            )
-    println("Started build on TeamCity with ID=${build.id}\n${build.getHomeUrl()}\n\n")
+  val cmd = args.getOrNull(0)?.toLowerCase()
+  when {
+    cmd == "run" -> startNewBuild()
+    cmd == "show" -> showPendingBuilds()
   }
 }
 
-class TeamCityRRState(
-        val branch: RRBranchInfo
-) {
-  fun toParameterString(): String {
-    val om = ObjectMapper()
-    val root = om.createObjectNode()
-    root.put("user", System.getProperty("user.name"))
-    root.put("commit", branch.commit)
-    root.put("date", DateTimeFormatter.ISO_DATE_TIME.format(LocalDateTime.now()))
-    root.put("full-branch", branch.fullName)
-    root.put("short-branch", branch.shortName)
-    root.put("local-branch", branch.originalBranchName)
-    root.put("rr-version", rrVersion)
-    return om.writerWithDefaultPrettyPrinter().writeValueAsString(root)
+private fun startNewBuild() {
+  checkGitVersion()
+  val branch = createRRBranch()
+  val tc = connectToTeamCity()
+
+  val build = tc.buildConfiguration(ijAggBuild)
+          .runBuild(
+                  parameters = mapOf(
+                          customBranchParameter to branch.fullName,
+                          customParameterMarker to TeamCityRRState(branch).toParameterString()
+                  ),
+                  personal = true,
+                  queueAtTop = true,
+                  logicalBranchName = "$customTeamCityBranchNamePrefix${branch.shortName}"
+          )
+  println("Started build on TeamCity with ID=${build.id}\n${build.getHomeUrl()}\n\n")
+  build.addTag(customTeamCityTagName)
+}
+
+private fun showPendingBuilds() {
+  val tc = connectToTeamCity()
+
+  val ourProjectId = tc.buildConfiguration(ijAggBuild).projectId
+  tc.buildQueue().queuedBuilds(ourProjectId /*TODO: implement per configuration REST API CALL*/)
+          .filter { it.buildConfigurationId == ijAggBuild }
+          .filter { it.parameters.any { it.name == customParameterMarker } }
+          .forEach {
+    println("Queued build ${it.id} in branch ${it.branch}. ${it.status}")
   }
+
+  tc.builds()
+          .fromConfiguration(ijAggBuild)
+          .withAllBranches()
+          .onlyPersonal()
+          .includeRunning()
+          .includeFailed()
+          .all()
+          .filter { it.branch.name?.startsWith(customTeamCityBranchNamePrefix) == true }
+          .forEach { build ->
+            println("${build.id} in branch ${build.branch.name}. ${build.runningInfo?.percentageComplete ?: "??"}%. ${build.status} ${build.statusText} ")
+
+            build.testRuns(TestStatus.FAILED)
+                    .filter { !it.muted }
+                    .filter { !it.currentlyMuted }
+                    .filter { !it.ignored }
+                    .forEach {
+              println("  " + it.name + "  FAILED")
+            }
+            println()
+          }
 }
