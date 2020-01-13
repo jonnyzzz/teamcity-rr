@@ -1,6 +1,7 @@
 package com.jonnyzzz.teamcity.rr
 
 import com.fasterxml.jackson.databind.ObjectMapper
+import org.jetbrains.teamcity.rest.Build
 import org.jetbrains.teamcity.rest.TeamCityInstance
 import org.jetbrains.teamcity.rest.TeamCityInstanceFactory
 import java.io.File
@@ -38,10 +39,25 @@ fun connectToTeamCity(): TeamCityInstance {
   }
 }
 
-class TeamCityRRState(
-        private val branch: RRBranchInfo
-) {
-  fun toParameterString(): String {
+object TeamCityRRState {
+  fun loadFromBuild(build: Build): RRBranchInfo {
+    val state = build.parameters.first { it.name == customParameterMarker }
+    return loadParametersFromString(state.value)
+  }
+
+  private fun loadParametersFromString(text: String): RRBranchInfo {
+    val om = ObjectMapper()
+    val root = om.readTree(text)
+
+    return RRBranchInfo(
+            fullName =  root.get("full-branch").asText(),
+            shortName = root.get("short-branch").asText(),
+            commit = root.get("commit").asText(),
+            originalBranchName = root.get("local-branch").asText()
+    )
+  }
+
+  fun toParameterString(branch: RRBranchInfo): String {
     val om = ObjectMapper()
     val root = om.createObjectNode()
     root.put("user", System.getProperty("user.name"))

@@ -3,6 +3,7 @@ package com.jonnyzzz.teamcity.rr
 import org.apache.log4j.BasicConfigurator
 import org.apache.log4j.Level
 import org.apache.log4j.Logger
+import org.jetbrains.teamcity.rest.Build
 import org.jetbrains.teamcity.rest.BuildConfigurationId
 import org.jetbrains.teamcity.rest.TestStatus
 import java.io.File
@@ -70,7 +71,7 @@ private fun startNewBuild() {
           .runBuild(
                   parameters = mapOf(
                           customBranchParameter to branch.fullName,
-                          customParameterMarker to TeamCityRRState(branch).toParameterString()
+                          customParameterMarker to TeamCityRRState.toParameterString(branch)
                   ),
                   personal = true,
                   queueAtTop = true,
@@ -80,35 +81,43 @@ private fun startNewBuild() {
   build.addTag(customTeamCityTagName)
 }
 
+private fun Sequence<Build>.teamcityRRBuilds() = this
+        .filter { it.buildConfigurationId == ijAggBuild }
+        .filter { it.parameters.any { it.name == customParameterMarker } }
+
 private fun showPendingBuilds() {
   val tc = connectToTeamCity()
 
   val ourProjectId = tc.buildConfiguration(ijAggBuild).projectId
-  tc.buildQueue().queuedBuilds(ourProjectId /*TODO: implement per configuration REST API CALL*/)
-          .filter { it.buildConfigurationId == ijAggBuild }
-          .filter { it.parameters.any { it.name == customParameterMarker } }
-          .forEach {
-    println("Queued build ${it.id} in branch ${it.branch}. ${it.status}")
-  }
 
-  tc.builds()
-          .fromConfiguration(ijAggBuild)
-          .withAllBranches()
-          .onlyPersonal()
-          .includeRunning()
-          .includeFailed()
-          .all()
-          .filter { it.branch.name?.startsWith(customTeamCityBranchNamePrefix) == true }
-          .forEach { build ->
-            println("${build.id} in branch ${build.branch.name}. ${build.runningInfo?.percentageComplete ?: "??"}%. ${build.status} ${build.statusText} ")
+  val allBuilds = (
+          tc.buildQueue()
+                  .queuedBuilds(ourProjectId /*TODO: implement per configuration REST API CALL*/)
+                  +
+                  tc.builds()
+                          .fromConfiguration(ijAggBuild)
+                          .withAllBranches()
+                          .onlyPersonal()
+                          .includeRunning()
+                          .includeFailed()
+                          .all()
+          ).teamcityRRBuilds()
 
-            build.testRuns(TestStatus.FAILED)
-                    .filter { !it.muted }
-                    .filter { !it.currentlyMuted }
-                    .filter { !it.ignored }
-                    .forEach {
+  allBuilds.forEach { build ->
+    println("${build.id} in branch ${build.branch.name}. ${build.runningInfo?.percentageComplete ?: "??"}%. ${build.status} ${build.statusText} ")
+    val params = TeamCityRRState.loadFromBuild(build)
+    println("  " + build.getHomeUrl())
+    println("  RemoteRun for ${params.originalBranchName} @ ${params.commit} running as ${params.fullName}")
+    println()
+
+    build.testRuns(TestStatus.FAILED)
+            .filter { !it.muted }
+            .filter { !it.currentlyMuted }
+            .filter { !it.ignored }
+            .forEach {
               println("  " + it.name + "  FAILED")
             }
-            println()
-          }
+    println()
+    println()
+  }
 }
