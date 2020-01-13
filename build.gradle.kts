@@ -16,7 +16,19 @@ repositories {
 dependencies {
   implementation(kotlin("stdlib-jdk8"))
 
-  implementation("org.jetbrains.teamcity:teamcity-rest-client:1.7.27")
+  implementation("org.jetbrains.teamcity:teamcity-rest-client")
+
+  val slfVersion = "1.7.28"
+  implementation("org.slf4j:slf4j-api:$slfVersion")
+  implementation("org.slf4j:jcl-over-slf4j:$slfVersion")
+  implementation("org.slf4j:slf4j-log4j12:$slfVersion")
+  implementation("log4j:log4j:1.2.17")
+
+
+  implementation("com.fasterxml.jackson.core:jackson-core:2.10.0")
+  implementation("com.fasterxml.jackson.core:jackson-databind:2.10.0")
+  implementation("com.fasterxml.jackson.core:jackson-annotations:2.10.0")
+  implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.10.0")
 }
 
 tasks.wrapper {
