@@ -42,3 +42,12 @@ tasks.withType<KotlinCompile> {
 application {
   mainClassName = "com.jonnyzzz.teamcity.rr.RRMain"
 }
+
+val distUnpacked by tasks.creating(Sync::class.java) {
+  dependsOn(tasks.distZip)
+  group = "distribution"
+  from({ zipTree(tasks.distZip.get().archiveFile) })
+  into("$buildDir/unpacked")
+  includeEmptyDirs = false
+  eachFile { path = path.split("/", limit = 2)[1] }
+}
