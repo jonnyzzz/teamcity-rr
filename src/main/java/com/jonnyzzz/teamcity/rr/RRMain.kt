@@ -55,10 +55,10 @@ private fun theMain(args: Array<String>) {
     exitProcess(11)
   }
 
-  val cmd = args.getOrNull(0)?.toLowerCase()
-  when {
-    cmd == "run" -> startNewBuild()
-    cmd == "show" -> showPendingBuilds()
+  when (val cmd = args.getOrNull(0)?.toLowerCase()) {
+      "run" -> startNewBuild()
+      "show" -> showPendingBuilds()
+      else -> error("Unknown command: $cmd")
   }
 }
 
