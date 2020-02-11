@@ -1,12 +1,15 @@
 package com.jonnyzzz.teamcity.rr
 
+import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.flow.collect
 import org.apache.log4j.BasicConfigurator
 import org.apache.log4j.Level
 import org.apache.log4j.Logger
-import org.jetbrains.teamcity.rest.Build
-import org.jetbrains.teamcity.rest.BuildConfigurationId
-import org.jetbrains.teamcity.rest.TestStatus
+import org.jetbrains.teamcity.rest.*
 import java.io.File
+import kotlin.sequences.filter
+import kotlin.sequences.forEach
 import kotlin.system.exitProcess
 
 const val rrVersion = "0.0.42"
@@ -81,43 +84,136 @@ private fun startNewBuild() {
   build.addTag(customTeamCityTagName)
 }
 
-private fun Sequence<Build>.teamcityRRBuilds() = this
+private fun Sequence<Build>.teamcityRRBuilds() : Sequence<Build> = this
         .filter { it.buildConfigurationId == ijAggBuild }
         .filter { it.parameters.any { it.name == customParameterMarker } }
 
-private fun showPendingBuilds() {
+private fun showPendingBuilds() = runBlocking {
   val tc = connectToTeamCity()
 
   val ourProjectId = tc.buildConfiguration(ijAggBuild).projectId
 
-  val allBuilds = (
-          tc.buildQueue()
-                  .queuedBuilds(ourProjectId /*TODO: implement per configuration REST API CALL*/)
-                  +
-                  tc.builds()
-                          .fromConfiguration(ijAggBuild)
-                          .withAllBranches()
-                          .onlyPersonal()
-                          .includeRunning()
-                          .includeFailed()
-                          .all()
-          ).teamcityRRBuilds()
+  val allBuilds = channelFlow {
+    coroutineScope {
+      launch(Dispatchers.IO) {
+        tc.buildQueue()
+                .queuedBuilds(ourProjectId /*TODO: implement per configuration REST API CALL*/)
+                .teamcityRRBuilds()
+                .forEach { send(it) }
+      }
 
-  allBuilds.forEach { build ->
-    println("${build.id} in branch ${build.branch.name}. ${build.runningInfo?.percentageComplete ?: "??"}%. ${build.status} ${build.statusText} ")
-    val params = TeamCityRRState.loadFromBuild(build)
-    println("  " + build.getHomeUrl())
-    println("  RemoteRun for ${params.originalBranchName} @ ${params.commit} running as ${params.fullName}")
-    println()
-
-    build.testRuns(TestStatus.FAILED)
-            .filter { !it.muted }
-            .filter { !it.currentlyMuted }
-            .filter { !it.ignored }
-            .forEach {
-              println("  " + it.name + "  FAILED")
-            }
-    println()
-    println()
+      launch(Dispatchers.IO) {
+        tc.builds()
+                .fromConfiguration(ijAggBuild)
+                .withAllBranches()
+                .onlyPersonal()
+                .includeRunning()
+                .includeFailed()
+                .limitResults(16)
+                .all()
+                .teamcityRRBuilds()
+                .forEach { send(it) }
+      }
+    }
   }
+
+  coroutineScope {
+    allBuilds.collect { build ->
+      launch(Dispatchers.Default) {
+        processOneBuild(tc, build)
+      }
+    }
+  }
+}
+
+private fun CoroutineScope.loadFailedTestsAsync(build: Build) = async(Dispatchers.IO) {
+  build.testRuns(TestStatus.FAILED).asFlow().flowOn(Dispatchers.IO)
+          .filter { !it.muted }
+          .filter { !it.currentlyMuted }
+          .filter { !it.ignored }
+          .toList(ArrayList())
+          .sortedBy { it.name }
+}
+
+private fun CoroutineScope.resolveNearestMasterBuildAsync(tc: TeamCityInstance,
+                                                          params: RRBranchInfo) = async(Dispatchers.IO) {
+  val commits = runCatching {
+    listGitCommits(params, 2048)
+  }.getOrElse {
+    return@async null
+  }.toSet()
+
+  val masterBuild = tc.builds()
+          .fromConfiguration(ijAggBuild)
+          .includeFailed()
+          .all()
+          .firstOrNull { it.revisions.any { rev -> commits.contains(rev.version) } }
+
+  masterBuild ?: return@async null
+  masterBuild to loadFailedTestsAsync(masterBuild)
+}
+
+private suspend fun processOneBuild(tc: TeamCityInstance, build: Build) = coroutineScope {
+  val logMessage = buildString {
+    buildMessage(tc, build)
+  }
+
+  println(logMessage)
+}
+
+private fun StringBuilder.appendFailures(name: String, data: List<TestRun>) {
+  if (data.isNotEmpty()) {
+    appendln("  $name:")
+
+    val testBySuite = data.groupBy { it.name.split(":").first() }
+    for ((suite, tests) in testBySuite) {
+      appendln("    $suite:")
+      tests.map { it.name.removePrefix("$suite:").trim() }.sortedWith(String.CASE_INSENSITIVE_ORDER).forEach {
+        appendln("      $it")
+      }
+      appendln()
+    }
+  } else {
+    appendln("  $name: NONE!")
+  }
+
+  appendln()
+}
+
+private suspend fun StringBuilder.buildMessage(tc: TeamCityInstance, build: Build) = coroutineScope {
+  appendln("${build.id} in branch ${build.branch.name}. ${build.runningInfo?.percentageComplete ?: "??"}%. ${build.status} ${build.statusText} ")
+  val params = TeamCityRRState.loadFromBuild(build)
+  appendln("  " + build.getHomeUrl())
+  appendln("  RemoteRun for ${params.originalBranchName} @ ${params.commit} running as ${params.fullName}")
+  appendln()
+
+  val ourFailedTestsAsync = loadFailedTestsAsync(build)
+  val masterFailedAndTestsAsync = resolveNearestMasterBuildAsync(tc, params)
+  val ourFailedTests = ourFailedTestsAsync.await()
+  val masterBuildAndFailedTests = masterFailedAndTestsAsync.await()
+
+  if (masterBuildAndFailedTests != null) {
+    val (masterBuild, masterFailedTestsAsync) = masterBuildAndFailedTests
+    val masterFailedTests = masterFailedTestsAsync.await()
+
+    appendln("  Comparing results with build #${masterBuild.id}")
+    appendln("     " + build.getHomeUrl())
+    appendln()
+
+    val masterFailedTestNames = masterFailedTests.map { it.name }.toSet()
+    val (newFailed, justFailed) = run {
+      val group = ourFailedTests.groupBy { masterFailedTestNames.contains(it.name) }
+      (group[false]?: listOf()) to (group[true] ?: listOf())
+    }
+
+    appendFailures("New tests Failures", newFailed)
+    appendFailures("Other tests Failures", justFailed)
+
+  } else {
+    appendln("  Failed to find a Master build to compare results")
+    appendFailures("Tests Failures", ourFailedTests)
+  }
+
+  appendln()
+  appendln()
 }

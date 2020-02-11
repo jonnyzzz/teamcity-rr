@@ -29,6 +29,8 @@ dependencies {
   implementation("com.fasterxml.jackson.core:jackson-databind:2.10.0")
   implementation("com.fasterxml.jackson.core:jackson-annotations:2.10.0")
   implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.10.0")
+
+  implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.3.3")
 }
 
 tasks.wrapper {
@@ -37,6 +39,7 @@ tasks.wrapper {
 
 tasks.withType<KotlinCompile> {
   kotlinOptions.jvmTarget = "11"
+  kotlinOptions.freeCompilerArgs += "-Xuse-experimental=kotlinx.coroutines.ExperimentalCoroutinesApi"
 }
 
 application {

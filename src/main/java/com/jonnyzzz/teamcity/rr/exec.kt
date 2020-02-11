@@ -37,7 +37,7 @@ fun execWithOutput(workDir: File = WorkDir,
           thread(name = "process-stdout") { processErrorText.set(process.errorStream.bufferedReader().readText()) }
   )
 
-  if (!process.waitFor(timeout, timeoutUnit)) {
+  if (runCatching { process.waitFor(timeout, timeoutUnit) }.getOrNull() != true) {
     catchAll { process.destroyForcibly() }
     futures.forEach { it.interrupt() }
     error("Failed to wait for the process to complete!")

@@ -64,3 +64,12 @@ fun createRRBranch(): RRBranchInfo {
           originalBranchName = headName
   )
 }
+
+fun listGitCommits(info: RRBranchInfo, commits: Int = 1024) : List<String> {
+  //git log --topo-order --no-abbrev-commit --format='%H' 01f6cfd510ae51e6a8fa22046843a121737c8fdc
+  return execWithOutput(
+          args = listOf(GIT_COMMAND, "log", "-$commits", "--topo-order", "--format=%H", info.commit),
+          timeout = 15,
+          timeoutUnit = TimeUnit.SECONDS
+  ).successfully().stdout.split("\n").map { it.trim() }.filter { it.isNotBlank() }
+}
