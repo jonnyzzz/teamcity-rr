@@ -54,7 +54,10 @@ private fun theMain(args: Array<String>) {
   println("Running in $WorkDir...")
 
   if (args.isEmpty()) {
-    println("Please select command!")
+    println("Please select command:")
+    println("  run  --- sends the current repository commit to RR")
+    println("  show --- lists all pending remote runs")
+    println()
     exitProcess(11)
   }
 
