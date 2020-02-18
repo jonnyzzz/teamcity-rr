@@ -63,6 +63,8 @@ private fun theMain(args: Array<String>) {
       "show" -> showPendingBuilds()
       else -> error("Unknown command: $cmd")
   }
+
+  exitProcess(1)
 }
 
 private fun startNewBuild() {
