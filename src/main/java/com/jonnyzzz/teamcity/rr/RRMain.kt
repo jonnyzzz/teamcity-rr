@@ -202,7 +202,7 @@ private suspend fun StringBuilder.buildMessage(tc: TeamCityInstance, build: Buil
     val masterFailedTests = masterFailedTestsAsync.await()
 
     appendln("  Comparing results with build #${masterBuild.id}")
-    appendln("     " + build.getHomeUrl())
+    appendln("     " + masterBuild.getHomeUrl())
     appendln()
 
     val masterFailedTestNames = masterFailedTests.map { it.name }.toSet()
