@@ -10,6 +10,7 @@
           <param name="plugin.docker.imageId" value="amazoncorretto:11" />
           <param name="plugin.docker.imagePlatform" value="linux" />
           <param name="plugin.docker.pull.enabled" value="true" />
+          <param name="teamcity.build.workingDir" value="teamcity-rr" />
           <param name="teamcity.step.mode" value="default" />
           <param name="ui.gradleRunner.gradle.stacktrace.enabled" value="true" />
           <param name="ui.gradleRunner.gradle.tasks.names" value="teamcity" />
@@ -18,7 +19,12 @@
       </runner>
     </build-runners>
     <vcs-settings>
-      <vcs-entry-ref root-id="jonnyzzz_teamcity_rr_github" />
+      <vcs-entry-ref root-id="jonnyzzz_teamcity_rr_github">
+        <checkout-rule rule="+:.=&gt;teamcity-rr" />
+      </vcs-entry-ref>
+      <vcs-entry-ref root-id="jonnyzzz_teamcity_rr_TeamcityRestClientGit">
+        <checkout-rule rule="+:.=&gt;teamcity-rest-client" />
+      </vcs-entry-ref>
     </vcs-settings>
     <requirements />
     <build-triggers />
