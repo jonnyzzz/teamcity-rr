@@ -19,7 +19,7 @@
     </build-runners>
     <vcs-settings>
       <vcs-entry-ref root-id="jonnyzzz_teamcity_rr_github">
-        <checkout-rule rule="teamcity-rr" />
+        <checkout-rule rule="+:.=&gt;teamcity-rr" />
       </vcs-entry-ref>
     </vcs-settings>
     <requirements />
