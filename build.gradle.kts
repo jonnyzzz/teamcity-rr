@@ -2,6 +2,7 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
   kotlin("jvm") version "1.3.60"
+  id("de.undercouch.download") version "4.0.4"
   application
 }
 
@@ -89,5 +90,89 @@ val `rr-show` by tasks.creating(JavaExec::class) {
   dependsOn(updateSources)
   copyFromApplicationRun("show")
   group = "teamcity-rr"
+}
+
+val teamcity by tasks.creating() {
+  dependsOn(tasks.distZip)
+}
+
+data class JdkInfo(val os: String, val url: String) {
+  val jdkHome = buildDir / "jdk-$os"
+
+  lateinit var unpackTask: Copy
+}
+
+val javaImages = listOf(
+        JdkInfo("linux", "https://corretto.aws/downloads/latest/amazon-corretto-11-x64-linux-jdk.tar.gz"),
+        JdkInfo("mac", "https://corretto.aws/downloads/latest/amazon-corretto-11-x64-macos-jdk.tar.gz"),
+        JdkInfo("windows", "https://corretto.aws/downloads/latest/amazon-corretto-11-x64-windows-jdk.zip")
+)
+
+val downloadJDKs by tasks.creating() { }
+
+operator fun File.div(s: String) = File(this, s)
+
+javaImages.forEach { info ->
+  val jdkHomeFlag = buildDir / "jdk-${info.os}.flag"
+  val jdkArchive = buildDir / info.url.split("/").last()
+
+  val downloadTask = tasks.create<de.undercouch.gradle.tasks.download.Download>("jdk_download_${info.os}") {
+    src(info.url)
+    dest(jdkArchive)
+    overwrite(false)
+  }
+
+  val unpackTask = tasks.create<Copy>("jdk_unpack_${info.os}") {
+    dependsOn(downloadTask)
+
+    doFirst {
+      delete(info.jdkHome, jdkHomeFlag)
+    }
+
+    doLast {
+      jdkHomeFlag.writeText("ok")
+    }
+
+    inputs.property("os", info.os)
+    inputs.property("url", info.url)
+    inputs.property("v", 5)
+    outputs.file(jdkHomeFlag)
+
+    when {
+      jdkArchive.path.endsWith(".zip") -> from(zipTree(jdkArchive))
+      jdkArchive.path.endsWith(".tar.gz") -> from(tarTree((jdkArchive)))
+      else -> error("Unknown archive: $jdkArchive")
+    }
+
+    into(info.jdkHome)
+
+    includeEmptyDirs = false
+
+    when(info.os) {
+      "linux", "windows" -> {
+        include("*/**")
+        eachFile { this.path = this.path.split("/").drop(1).joinToString("/") }
+      }
+      "mac" -> {
+        include("*/Contents/Home/**")
+        eachFile { this.path = this.path.split("/").drop(3).joinToString("/") }
+      }
+    }
+  }
+
+  downloadJDKs.dependsOn(unpackTask)
+  info.unpackTask = unpackTask
+}
+
+distributions {
+  main {
+    contents {
+      for (info in javaImages) {
+        from(info.unpackTask) {
+          into("jdk-${info.os}")
+        }
+      }
+    }
+  }
 }
 
