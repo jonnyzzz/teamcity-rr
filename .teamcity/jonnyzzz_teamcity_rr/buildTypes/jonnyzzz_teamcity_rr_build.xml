@@ -3,6 +3,9 @@
   <name>Build</name>
   <description />
   <settings>
+    <options>
+      <option name="buildNumberPattern" value="1.3.%build.counter%" />
+    </options>
     <parameters />
     <build-runners>
       <runner id="RUNNER_7373" name="" type="gradle-runner">
