@@ -76,10 +76,6 @@ val updateSources by tasks.creating(Exec::class.java) {
   commandLine("git", "pull")
 }
 
-tasks.classes.configure {
-  dependsOn(updateSources)
-}
-
 val `rr-run` by tasks.creating(JavaExec::class) {
   dependsOn(updateSources)
   copyFromApplicationRun("run")
