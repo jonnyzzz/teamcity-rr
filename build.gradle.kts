@@ -1,3 +1,5 @@
+@file:Suppress("HasPlatformType", "PropertyName")
+
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
@@ -89,7 +91,7 @@ val `rr-show` by tasks.creating(JavaExec::class) {
   group = "teamcity-rr"
 }
 
-val teamcity by tasks.creating() {
+val teamcity by tasks.creating {
   dependsOn(tasks.distZip)
 
   doLast {
