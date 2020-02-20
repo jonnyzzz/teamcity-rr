@@ -92,6 +92,6 @@ val teamcity by tasks.creating() {
   dependsOn(tasks.distZip)
 
   doLast {
-    println(" ##teamcity[publishArtifacts '${tasks.distZip.get().archiveFile}'] ")
+    println(" ##teamcity[publishArtifacts '${tasks.distZip.get().archiveFile.get().asFile}'] ")
   }
 }
