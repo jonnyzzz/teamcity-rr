@@ -94,4 +94,9 @@ val `rr-show` by tasks.creating(JavaExec::class) {
 
 val teamcity by tasks.creating() {
   dependsOn(tasks.distZip)
+
+  doLast {
+    println(" ##teamcity[publishArtifacts '${tasks.distZip}'] ")
+  }
+
 }
