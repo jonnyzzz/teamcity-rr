@@ -54,6 +54,7 @@ val distUnpacked by tasks.creating(Sync::class.java) {
   into("$buildDir/unpacked")
   includeEmptyDirs = false
   eachFile { path = path.split("/", limit = 2)[1] }
+  doFirst { delete("$buildDir/unpacked") }
 }
 
 fun JavaExec.copyFromApplicationRun(vararg extraArgs: String) {
@@ -93,5 +94,15 @@ val teamcity by tasks.creating() {
 
   doLast {
     println(" ##teamcity[publishArtifacts '${tasks.distZip.get().archiveFile.get().asFile}'] ")
+  }
+}
+
+distributions {
+  main {
+    contents {
+      from("README.md") {
+        into("")
+      }
+    }
   }
 }
