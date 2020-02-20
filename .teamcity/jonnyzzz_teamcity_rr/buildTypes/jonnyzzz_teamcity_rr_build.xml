@@ -7,9 +7,12 @@
     <build-runners>
       <runner id="RUNNER_7373" name="" type="gradle-runner">
         <parameters>
+          <param name="plugin.docker.imageId" value="amazoncorretto:11" />
+          <param name="plugin.docker.imagePlatform" value="linux" />
+          <param name="plugin.docker.pull.enabled" value="true" />
           <param name="teamcity.step.mode" value="default" />
+          <param name="ui.gradleRunner.gradle.stacktrace.enabled" value="true" />
           <param name="ui.gradleRunner.gradle.tasks.names" value="clean build" />
-          <param name="ui.gradleRunner.gradle.wrapper.path" value="" />
           <param name="ui.gradleRunner.gradle.wrapper.useWrapper" value="true" />
         </parameters>
       </runner>
