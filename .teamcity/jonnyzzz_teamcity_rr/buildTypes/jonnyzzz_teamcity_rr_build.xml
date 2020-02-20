@@ -21,6 +21,7 @@
       <vcs-entry-ref root-id="jonnyzzz_teamcity_rr_github">
         <checkout-rule rule="+:.=&gt;teamcity-rr" />
       </vcs-entry-ref>
+      <vcs-entry-ref root-id="jonnyzzz_teamcity_rr_TeamcityRestClientGit" />
     </vcs-settings>
     <requirements />
     <build-triggers />
