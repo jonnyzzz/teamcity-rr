@@ -98,5 +98,4 @@ val teamcity by tasks.creating() {
   doLast {
     println(" ##teamcity[publishArtifacts '${tasks.distZip}'] ")
   }
-
 }

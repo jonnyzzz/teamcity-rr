@@ -19,9 +19,7 @@
       </runner>
     </build-runners>
     <vcs-settings>
-      <vcs-entry-ref root-id="jonnyzzz_teamcity_rr_github">
-        <checkout-rule rule="+:.=&gt;teamcity-rr" />
-      </vcs-entry-ref>
+      <vcs-entry-ref root-id="jonnyzzz_teamcity_rr_github"/>
       <vcs-entry-ref root-id="jonnyzzz_teamcity_rr_TeamcityRestClientGit">
         <checkout-rule rule="+:.=&gt;teamcity-rest-client" />
       </vcs-entry-ref>

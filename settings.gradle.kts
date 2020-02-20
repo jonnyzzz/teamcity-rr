@@ -1,14 +1,22 @@
 rootProject.name = "teamcity-rr"
 
-val teamcityRestHome = File(rootProject.projectDir, "../teamcity-rest-client")
+val restClient = File(rootProject.projectDir, "teamcity-rest-client")
 
-if (System.getenv("TEAMCITY_VERSION") == null && teamcityRestHome.isDirectory) {
 
-  includeBuild(teamcityRestHome) {
-    dependencySubstitution {
-       substitute(module("org.jetbrains.teamcity:teamcity-rest-client")).with(project(":"))
-    }
-  }
+if (!restClient.isDirectory) {
+    println()
+    println()
+    println("TeamCity Rest Client is missing, please checkout the ")
+    println("https://github.com/jonnyzzz/teamcity-rest-client")
+    println("and use the `teamcity-rr` branch")
+    println()
+    println()
+    error("See above")
 }
 
+includeBuild(restClient) {
+    dependencySubstitution {
+        substitute(module("org.jetbrains.teamcity:teamcity-rest-client")).with(project(":"))
+    }
+}
 
