@@ -42,18 +42,15 @@ fun connectToTeamCity(): TeamCityInstance {
 object TeamCityRRState {
   fun loadFromBuild(build: Build): RRBranchInfo {
     val state = build.parameters.first { it.name == customParameterMarker }
-    return loadParametersFromString(state.value)
-  }
-
-  private fun loadParametersFromString(text: String): RRBranchInfo {
     val om = ObjectMapper()
-    val root = om.readTree(text)
-
+    val root = om.readTree(state.value)
     return RRBranchInfo(
             fullName =  root.get("full-branch").asText(),
             shortName = root.get("short-branch").asText(),
             commit = root.get("commit").asText(),
-            originalBranchName = root.get("local-branch").asText()
+            originalBranchName = root.get("local-branch").asText(),
+            //TODO: is it the same configuration as we had?
+            targetBuildConfigurationId = build.buildConfigurationId
     )
   }
 

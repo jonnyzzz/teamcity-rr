@@ -1,5 +1,5 @@
 <component name="ProjectRunConfigurationManager">
-  <configuration default="false" name="RRMain - run" type="JetRunConfigurationType" factoryName="Kotlin">
+  <configuration default="false" name="RRMain - run - 201" type="JetRunConfigurationType" factoryName="Kotlin">
     <module name="teamcity-rr.main" />
     <option name="VM_PARAMETERS" value="" />
     <option name="PROGRAM_PARAMETERS" value="run" />
@@ -7,7 +7,7 @@
     <option name="ALTERNATIVE_JRE_PATH" />
     <option name="PASS_PARENT_ENVS" value="true" />
     <option name="MAIN_CLASS_NAME" value="com.jonnyzzz.teamcity.rr.RRMain" />
-    <option name="WORKING_DIRECTORY" value="file://$PROJECT_DIR$/../intellij" />
+    <option name="WORKING_DIRECTORY" value="file://$PROJECT_DIR$/../intellij-201" />
     <method v="2">
       <option name="Make" enabled="true" />
     </method>

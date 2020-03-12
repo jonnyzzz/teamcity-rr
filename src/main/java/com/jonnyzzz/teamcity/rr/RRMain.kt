@@ -20,7 +20,10 @@ const val customGitBranchNamePrefix = "refs/jonnyzzz-rr"
 const val customTeamCityBranchNamePrefix = "jonnyzzz-rr/"
 const val customTeamCityTagName = "jonnyzzz-rr"
 
-val ijAggBuild = BuildConfigurationId("ijplatform_master_Idea_Tests_AggregatorJdk11")
+val ijAggPerGitBranch = mapOf(
+        BuildConfigurationId("ijplatform_master_Idea_Tests_AggregatorJdk11") to "master",
+        BuildConfigurationId("ijplatform201_Idea_Tests_AggregatorJdk11") to "201"
+)
 
 val WorkDir: File by lazy { File(".").canonicalFile }
 class UserErrorException(message: String, cause: Throwable? = null) : Exception(message, cause)
@@ -75,7 +78,7 @@ private fun startNewBuild() {
   val branch = createRRBranch()
   val tc = connectToTeamCity()
 
-  val build = tc.buildConfiguration(ijAggBuild)
+  val build = tc.buildConfiguration(branch.targetBuildConfigurationId)
           .runBuild(
                   parameters = mapOf(
                           customBranchParameter to branch.fullName,
@@ -90,34 +93,34 @@ private fun startNewBuild() {
 }
 
 private fun Sequence<Build>.teamcityRRBuilds() : Sequence<Build> = this
-        .filter { it.buildConfigurationId == ijAggBuild }
+        .filter { ijAggPerGitBranch.containsKey(it.buildConfigurationId) }
         .filter { it.parameters.any { it.name == customParameterMarker } }
 
 private fun showPendingBuilds() = runBlocking {
   val tc = connectToTeamCity()
 
-  val ourProjectId = tc.buildConfiguration(ijAggBuild).projectId
-
   val allBuilds = channelFlow {
     coroutineScope {
       launch(Dispatchers.IO) {
         tc.buildQueue()
-                .queuedBuilds(ourProjectId /*TODO: implement per configuration REST API CALL*/)
+                .queuedBuilds() //TODO: implement per-build-type filter
                 .teamcityRRBuilds()
                 .forEach { send(it) }
       }
 
-      launch(Dispatchers.IO) {
-        tc.builds()
-                .fromConfiguration(ijAggBuild)
-                .withAllBranches()
-                .onlyPersonal()
-                .includeRunning()
-                .includeFailed()
-                .limitResults(16)
-                .all()
-                .teamcityRRBuilds()
-                .forEach { send(it) }
+      ijAggPerGitBranch.keys.forEach { buildConfigurationId ->
+        launch(Dispatchers.IO) {
+          tc.builds()
+                  .fromConfiguration(buildConfigurationId)
+                  .withAllBranches()
+                  .onlyPersonal()
+                  .includeRunning()
+                  .includeFailed()
+                  .limitResults(16)
+                  .all()
+                  .teamcityRRBuilds()
+                  .forEach { send(it) }
+        }
       }
     }
   }
@@ -149,7 +152,7 @@ private fun CoroutineScope.resolveNearestMasterBuildAsync(tc: TeamCityInstance,
   }.toSet()
 
   val masterBuild = tc.builds()
-          .fromConfiguration(ijAggBuild)
+          .fromConfiguration(params.targetBuildConfigurationId)
           .includeFailed()
           .all()
           .firstOrNull { it.revisions.any { rev -> commits.contains(rev.version) } }
