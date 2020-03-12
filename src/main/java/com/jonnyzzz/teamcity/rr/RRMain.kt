@@ -22,7 +22,7 @@ const val customTeamCityTagName = "jonnyzzz-rr"
 
 val ijAggPerGitBranch = mapOf(
         BuildConfigurationId("ijplatform_master_Idea_Tests_AggregatorJdk11") to "master",
-        BuildConfigurationId("ijplatform201_Idea_Tests_AggregatorJdk11") to "201"
+        BuildConfigurationId("ijplatform_IjPlatform201_Idea_Tests_AggregatorJdk11") to "201"
 )
 
 val WorkDir: File by lazy { File(".").canonicalFile }
