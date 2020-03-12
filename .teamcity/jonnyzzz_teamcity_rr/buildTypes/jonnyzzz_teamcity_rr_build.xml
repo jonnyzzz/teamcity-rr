@@ -3,6 +3,9 @@
   <name>Build</name>
   <description />
   <settings>
+    <options>
+      <option name="buildNumberPattern" value="1.3.%build.counter%" />
+    </options>
     <parameters />
     <build-runners>
       <runner id="RUNNER_7373" name="" type="gradle-runner">
@@ -24,7 +27,14 @@
       </vcs-entry-ref>
     </vcs-settings>
     <requirements />
-    <build-triggers />
+    <build-triggers>
+      <build-trigger id="vcsTrigger" type="vcsTrigger">
+        <parameters>
+          <param name="enableQueueOptimization" value="true" />
+          <param name="quietPeriodMode" value="DO_NOT_USE" />
+        </parameters>
+      </build-trigger>
+    </build-triggers>
     <cleanup />
   </settings>
 </build-type>
