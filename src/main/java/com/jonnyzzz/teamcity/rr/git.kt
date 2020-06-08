@@ -94,8 +94,8 @@ fun listGitCommits(head: String, commits: Int = 2048) : List<String> {
   //git log --topo-order --no-abbrev-commit --format='%H' 01f6cfd510ae51e6a8fa22046843a121737c8fdc
   return execWithOutput(
           args = listOf(GIT_COMMAND, "log", "-$commits", "--topo-order", "--format=%H", head),
-          timeout = 15,
-          timeoutUnit = TimeUnit.SECONDS
+          timeout = 5,
+          timeoutUnit = TimeUnit.MINUTES
   ).successfully().stdout.split("\n").map { it.trim() }.filter { it.isNotBlank() }
 }
 
