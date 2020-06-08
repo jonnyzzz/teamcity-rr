@@ -98,3 +98,23 @@ fun listGitCommits(head: String, commits: Int = 2048) : List<String> {
           timeoutUnit = TimeUnit.SECONDS
   ).successfully().stdout.split("\n").map { it.trim() }.filter { it.isNotBlank() }
 }
+
+fun showCommitShort(commit: String) : String {
+  //git log --topo-order --no-abbrev-commit --format='%H' 01f6cfd510ae51e6a8fa22046843a121737c8fdc
+  val info = execWithOutput(
+          args = listOf(GIT_COMMAND, "show", "--pretty=oneline", commit),
+          timeout = 15,
+          timeoutUnit = TimeUnit.SECONDS
+  ).successfully().stdout.split("\n").map { it.trim() }.filter { it.isNotBlank() }.first()
+  require(info.startsWith(commit))
+  return info
+}
+
+fun generateDiffStat(commits: List<String>) : String {
+  //git log --topo-order --no-abbrev-commit --format='%H' 01f6cfd510ae51e6a8fa22046843a121737c8fdc
+  return execWithOutput(
+          args = listOf(GIT_COMMAND, "diff", "--stat", *commits.toTypedArray()),
+          timeout = 15,
+          timeoutUnit = TimeUnit.SECONDS
+  ).successfully().stdout
+}

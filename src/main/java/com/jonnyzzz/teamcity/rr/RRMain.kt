@@ -1,6 +1,7 @@
 package com.jonnyzzz.teamcity.rr
 
 import kotlinx.coroutines.*
+import kotlinx.coroutines.channels.ProducerScope
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.flow.collect
 import org.apache.log4j.BasicConfigurator
@@ -92,24 +93,29 @@ private fun startNewBuild() {
   build.addTag(customTeamCityTagName)
 }
 
-private fun Sequence<Build>.teamcityRRBuilds() : Sequence<Build> = this
-        .filter { ijAggPerGitBranch.containsKey(it.buildConfigurationId) }
-        .filter { it.parameters.any { it.name == customParameterMarker } }
+private fun Sequence<Build>.teamcityRRBuilds(scope: ProducerScope<Build>) = with(scope) {
+  for (it in this@teamcityRRBuilds) {
+    launch(Dispatchers.IO) {
+      if (!ijAggPerGitBranch.containsKey(it.buildConfigurationId)) return@launch
+      if (!it.parameters.any { it.name == customParameterMarker }) return@launch
+      send(it)
+    }
+  }
+}
 
 private fun showPendingBuilds() = runBlocking {
   val tc = connectToTeamCity()
 
-  val allBuilds = channelFlow {
-    coroutineScope {
-      launch(Dispatchers.IO) {
+  val allBuilds = channelFlow<Build> {
+    withContext(Dispatchers.IO) {
+      launch {
         tc.buildQueue()
                 .queuedBuilds() //TODO: implement per-build-type filter
-                .teamcityRRBuilds()
-                .forEach { send(it) }
+                .teamcityRRBuilds(this@channelFlow)
       }
 
       ijAggPerGitBranch.keys.forEach { buildConfigurationId ->
-        launch(Dispatchers.IO) {
+        launch {
           tc.builds()
                   .fromConfiguration(buildConfigurationId)
                   .withAllBranches()
@@ -118,8 +124,7 @@ private fun showPendingBuilds() = runBlocking {
                   .includeFailed()
                   .limitResults(16)
                   .all()
-                  .teamcityRRBuilds()
-                  .forEach { send(it) }
+                  .teamcityRRBuilds(this@channelFlow)
         }
       }
     }
@@ -190,6 +195,7 @@ private fun StringBuilder.appendFailures(name: String, data: List<TestRun>) {
 
 private suspend fun StringBuilder.buildMessage(tc: TeamCityInstance, build: Build) = coroutineScope {
   appendln("${build.id} in branch ${build.branch.name}. ${build.runningInfo?.percentageComplete ?: "??"}%. ${build.status} ${build.statusText} ")
+  appendln("started on " + build.startDateTime + ", finished " + build.finishDateTime)
   val params = TeamCityRRState.loadFromBuild(build)
   appendln("  " + build.getHomeUrl())
   appendln("  RemoteRun for ${params.originalBranchName} @ ${params.commit} running as ${params.fullName}")
