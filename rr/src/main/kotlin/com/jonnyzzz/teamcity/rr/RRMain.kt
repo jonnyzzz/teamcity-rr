@@ -3,18 +3,11 @@ package com.jonnyzzz.teamcity.rr
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.ProducerScope
 import kotlinx.coroutines.flow.*
-import kotlinx.coroutines.flow.collect
-import org.apache.log4j.BasicConfigurator
-import org.apache.log4j.Level
-import org.apache.log4j.Logger
 import org.jetbrains.teamcity.rest.*
-import java.io.File
-import kotlin.sequences.filter
-import kotlin.sequences.forEach
+import org.slf4j.LoggerFactory
 import kotlin.system.exitProcess
 
 const val rrVersion = "0.0.42"
-const val teamCityURL = "https://buildserver.labs.intellij.net"
 const val customBranchParameter = "reverse.dep.*.intellij.platform.vcs.branch"
 const val customParameterMarker = "jonnyzzz.teamcity-rr-build"
 const val customGitBranchNamePrefix = "refs/jonnyzzz-rr"
@@ -26,19 +19,12 @@ val ijAggPerGitBranch = mapOf(
         BuildConfigurationId("ijplatform_IjPlatform201_Idea_Tests_AggregatorJdk11") to "201"
 )
 
-val WorkDir: File by lazy { File(".").canonicalFile }
-class UserErrorException(message: String, cause: Throwable? = null) : Exception(message, cause)
-
 object RRMain {
-  private val LOG = Logger.getLogger(javaClass)
+  private val LOG = LoggerFactory.getLogger(javaClass)
 
   @JvmStatic
   fun main(args: Array<String>) {
-    BasicConfigurator.configure()
-    Logger.getRootLogger().level = when {
-      System.getenv("TEAMCITY_RR_DEBUG") != null -> Level.DEBUG
-      else -> Level.INFO
-    }
+    setupLoggers()
 
     try {
       theMain(args)
@@ -176,30 +162,30 @@ private suspend fun processOneBuild(tc: TeamCityInstance, build: Build) = corout
 
 private fun StringBuilder.appendFailures(name: String, data: List<TestRun>) {
   if (data.isNotEmpty()) {
-    appendln("  $name:")
+    appendLine("  $name:")
 
     val testBySuite = data.groupBy { it.name.split(":").first() }
     for ((suite, tests) in testBySuite) {
-      appendln("    $suite:")
+      appendLine("    $suite:")
       tests.map { it.name.removePrefix("$suite:").trim() }.sortedWith(String.CASE_INSENSITIVE_ORDER).forEach {
-        appendln("      $it")
+        appendLine("      $it")
       }
-      appendln()
+      appendLine()
     }
   } else {
-    appendln("  $name: NONE!")
+    appendLine("  $name: NONE!")
   }
 
-  appendln()
+  appendLine()
 }
 
 private suspend fun StringBuilder.buildMessage(tc: TeamCityInstance, build: Build) = coroutineScope {
-  appendln("${build.id} in branch ${build.branch.name}. ${build.runningInfo?.percentageComplete ?: "??"}%. ${build.status} ${build.statusText} ")
-  appendln("started on " + build.startDateTime + ", finished " + build.finishDateTime)
+  appendLine("${build.id} in branch ${build.branch.name}. ${build.runningInfo?.percentageComplete ?: "??"}%. ${build.status} ${build.statusText} ")
+  appendLine("started on " + build.startDateTime + ", finished " + build.finishDateTime)
   val params = TeamCityRRState.loadFromBuild(build)
-  appendln("  " + build.getHomeUrl())
-  appendln("  RemoteRun for ${params.originalBranchName} @ ${params.commit} running as ${params.fullName}")
-  appendln()
+  appendLine("  " + build.getHomeUrl())
+  appendLine("  RemoteRun for ${params.originalBranchName} @ ${params.commit} running as ${params.fullName}")
+  appendLine()
 
   val ourFailedTestsAsync = loadFailedTestsAsync(build)
   val masterFailedAndTestsAsync = resolveNearestMasterBuildAsync(tc, params)
@@ -210,9 +196,9 @@ private suspend fun StringBuilder.buildMessage(tc: TeamCityInstance, build: Buil
     val (masterBuild, masterFailedTestsAsync) = masterBuildAndFailedTests
     val masterFailedTests = masterFailedTestsAsync.await()
 
-    appendln("  Comparing results with build #${masterBuild.id}")
-    appendln("     " + masterBuild.getHomeUrl())
-    appendln()
+    appendLine("  Comparing results with build #${masterBuild.id}")
+    appendLine("     " + masterBuild.getHomeUrl())
+    appendLine()
 
     val masterFailedTestNames = masterFailedTests.map { it.name }.toSet()
     val (newFailed, justFailed) = run {
@@ -224,10 +210,10 @@ private suspend fun StringBuilder.buildMessage(tc: TeamCityInstance, build: Buil
     appendFailures("Other tests Failures", justFailed)
 
   } else {
-    appendln("  Failed to find a Master build to compare results")
+    appendLine("  Failed to find a Master build to compare results")
     appendFailures("Tests Failures", ourFailedTests)
   }
 
-  appendln()
-  appendln()
+  appendLine()
+  appendLine()
 }

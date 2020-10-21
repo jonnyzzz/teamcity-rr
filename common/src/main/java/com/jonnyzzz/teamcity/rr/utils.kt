@@ -16,3 +16,5 @@ operator fun File.div(path: String) = File(this, path)
 
 operator fun Path.div(path: String): Path = resolve(path)
 
+val WorkDir: File by lazy { File(".").canonicalFile }
+

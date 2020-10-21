@@ -20,3 +20,6 @@ includeBuild(restClient) {
     }
 }
 
+include("common")
+include("rr")
+include("r-view")
