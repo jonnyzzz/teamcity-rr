@@ -3,7 +3,7 @@
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
-  kotlin("jvm") version "1.3.60"
+  kotlin("jvm") version "1.4.10"
   id("de.undercouch.download") version "4.0.4"
   application
 }
@@ -28,12 +28,12 @@ dependencies {
   implementation("log4j:log4j:1.2.17")
 
 
-  implementation("com.fasterxml.jackson.core:jackson-core:2.10.0")
-  implementation("com.fasterxml.jackson.core:jackson-databind:2.10.0")
-  implementation("com.fasterxml.jackson.core:jackson-annotations:2.10.0")
-  implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.10.0")
+  implementation("com.fasterxml.jackson.core:jackson-core:2.11.3")
+  implementation("com.fasterxml.jackson.core:jackson-databind:2.11.3")
+  implementation("com.fasterxml.jackson.core:jackson-annotations:2.11.3")
+  implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.11.3")
 
-  implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.3.3")
+  implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.3.9")
 }
 
 tasks.wrapper {
