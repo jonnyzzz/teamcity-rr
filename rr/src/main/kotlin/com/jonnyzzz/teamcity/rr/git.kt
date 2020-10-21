@@ -24,10 +24,7 @@ fun createRRBranch(): RRBranchInfo {
         if (it.isLetterOrDigit() || it == '-' || it == '_') it else '_'
     }.joinToString("")
 
-    val headName = execWithOutput(args = listOf(GIT_COMMAND, "rev-parse", "--symbolic-full-name", "HEAD"),
-            timeout = 5,
-            timeoutUnit = TimeUnit.SECONDS
-    ).successfully().stdout.trim().removePrefix("refs/heads/")
+    val headName = listGitCurrentBranchName().removePrefix("refs/heads/")
 
     require(headName.isNotBlank()) { "Failed to resolve current commit branch name" }
     println("Current state: $headCommit from branch $headName")
