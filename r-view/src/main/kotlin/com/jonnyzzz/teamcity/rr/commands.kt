@@ -53,7 +53,7 @@ object StartSafePushCommand : RViewCommandBase() {
 
         defaultGit.execGit(WithInheritSuccessfully, timeout = Duration.ofMinutes(5),
                 command = "push", args = listOf(
-                "origin",
+                "origin", "-f",
                 "$commit:$defaultSafePushBranchPrefix/master/j${commit.take(8)}",
                 "$commit:refs/heads/${branch.removePrefix("refs/heads/")}",
         ))
