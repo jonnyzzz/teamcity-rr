@@ -31,6 +31,20 @@ fun GitRunner.gitFetch() {
     )
 }
 
+fun GitRunner.setConfig(key: String, value: String) {
+    execGit(WithOutput, timeout = Duration.ofMinutes(1),
+            command = "config", args = listOf(key, value)).successfully()
+}
+
+fun GitRunner.getConfig(key: String): String? {
+    val result = execGit(WithOutput, timeout = Duration.ofMinutes(1),
+            command = "config", args = listOf("--get", key))
+    if (result.exitCode == 0) {
+        return result.stdout.trim()
+    }
+    return null
+}
+
 fun GitRunner.listGitBranches(): Map<String, String> {
     return execGit(WithOutput,
             command = "branch",

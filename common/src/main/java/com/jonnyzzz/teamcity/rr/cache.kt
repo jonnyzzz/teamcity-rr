@@ -97,6 +97,8 @@ object DiskCaches {
     path
   }
 
+  val branchesCacheDir by lazyDir { baseCachePath / "branches" }
+
   val redisCacheDir by lazyDir {
     baseCachePath / "kv-cache"
   }

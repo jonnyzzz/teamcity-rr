@@ -54,11 +54,10 @@ class GitWorktreeBase(
 
     fun initWorktreeIfNeeded() {
         tempGit.run {
-            val isNewRepo = if (!isValidGitCheckout) {
+            if (!isValidGitCheckout) {
                 workdir.mkdirs()
                 execGit(WithInheritSuccessfully, bare = true, timeout = Duration.ofSeconds(5), command = "init")
-                true
-            } else false
+            }
 
             //it's worth to rewrite alternates, just in case
             val alternates = gitDir / "objects" / "info" / "alternates"
@@ -66,17 +65,36 @@ class GitWorktreeBase(
             val mainObjects = (mainGit.gitDir / "objects").canonicalFile
             alternates.writeText("$mainObjects")
 
-            if (!isNewRepo) {
-                //these two commands may fail if repository is totally new
-                execGit(WithInherit, timeout = Duration.ofMinutes(15), command = "reset", args = listOf("--hard"))
-            }
+            copyConfig(
+                    "core.fsmonitor",
+                    "merge.renameLimit",
+                    "core.splitIndex",
+                    "feature.manyFiles",
+                    "index.threads"
+            )
 
             println("Temp Git repo for merges it ready at $tempGit")
         }
     }
 
+    private fun copyConfig(vararg keys: String) {
+        for (key in keys) {
+            val value = mainGit.getConfig(key) ?: continue
+            tempGit.setConfig(key, value)
+        }
+    }
+
     inline fun <Y> use(action: GitRunner.() -> Y): Y {
         initWorktreeIfNeeded()
-        return tempGit.run(action)
+        try {
+            return tempGit.run(action)
+        } catch (t: Throwable) {
+            //trying to fix the repository
+            tempGit.execGit(WithInherit, timeout = Duration.ofMinutes(15), command = "rebase", args = listOf("--abort"))
+            tempGit.execGit(WithInherit, timeout = Duration.ofMinutes(15), command = "cherry-pick", args = listOf("--abort"))
+            tempGit.execGit(WithInherit, timeout = Duration.ofMinutes(15), command = "merge", args = listOf("--abort"))
+            tempGit.execGit(WithInherit, timeout = Duration.ofMinutes(15), command = "reset", args = listOf("--hard"))
+            throw t
+        }
     }
 }

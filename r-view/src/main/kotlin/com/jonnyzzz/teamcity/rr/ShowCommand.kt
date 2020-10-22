@@ -1,98 +1,107 @@
 package com.jonnyzzz.teamcity.rr
 
 import org.slf4j.LoggerFactory
+import java.time.Duration
+import java.util.*
 
 fun showPendingBuilds(args: List<String>) = ShowCommand().showPendingBuilds(args)
 
 private class ShowCommand {
-    private val LOG = LoggerFactory.getLogger(ShowCommand::class.java)
-
     private val defaultGit by lazy {
         val git = GitRunner(workdir = WorkDir)
         git.checkGitVersion()
         git
     }
-    private val userEmail by lazy { defaultGit.getUserEmail() }
 
-    private val defaultSafePushBranchPredicate: (String) -> Boolean by lazy {
-        val username = userEmail.user
-        val text = "refs/heads/safepush/${username}/"
-        { it.equals(text, ignoreCase = true)}
-    }
+    private val safePushSuffix = "safepush/Eugene.Petrenko"
+    private val defaultSafePushBranchPrefix = "refs/$safePushSuffix"
+    private val defaultLocalPushBranchPrefix = "origin/safepush"
 
     private val defaultBranchPrefix = "refs/heads/jonnyzzz/"  //TODO: configuration?
+
+    private val gitBranchHistory by lazy { GitBranchHistory() }
 
     fun showPendingBuilds(args: List<String>) {
         println("Checking current status...")
         println()
 
-
-        val history = defaultGit.listGitCommitsEx("exp1", notIn = "origin/master")
-        println(history)
-
-        defaultGit.gitRebase("exp1", "origin/master")
-        defaultGit.gitRebase("exp3", "origin/master")
-
-        return
-
         if ("--no-fetch" !in args) {
-            //TODO: check if there were changes to avoid useless rebase
             println("Fetching changes from remote...")
-            defaultGit.gitFetch()
+            defaultGit.execGit(WithInheritSuccessfully, timeout = Duration.ofMinutes(10),
+                    command = "fetch",
+                    args = listOf("--prune", "origin",
+                            "refs/heads/master:origin/master",
+//                            "$defaultSafePushBranchPrefix/*:$defaultLocalPushBranchPrefix/*"
+                    ))
         }
 
-        val recentCommits: Set<String> = defaultGit.listGitCommits("origin/master", 4096).toHashSet()
+        val recentCommits = defaultGit.listGitCommitsEx("origin/master", commits = 2048)
+                .associateBy { it.commitId }
+
+        val headCommit = defaultGit.gitHeadCommit("origin/master")
+
         println("Listed ${recentCommits.size} recent commits")
 
-        var branches = defaultGit.listGitBranches()
-                .filterKeys { it.startsWith(defaultBranchPrefix) }
+        val alreadyMergedBranches = TreeMap<String, String>()
+        val rebaseFailedBranches = TreeMap<String, String>()
+        val otherBranches = TreeMap<String, String>()
 
-        println("Collected ${branches.size} local Git branches with $defaultBranchPrefix:")
-        println()
+        for ((branch, commit) in defaultGit.listGitBranches().toSortedMap()) {
+            if (!branch.startsWith(defaultBranchPrefix)) continue
 
-        val alreadyMergedBranches = branches
-                //branches that are in a commit from origin/master are fully ready
-                .filter { (_, commit) -> commit !in recentCommits }
+            if (commit in recentCommits) {
+                alreadyMergedBranches += branch to commit
+                continue
+            }
 
-        println("Already completed branches:")
-        for ((branch, _) in alreadyMergedBranches) {
-            println("  $branch")
+            println("Rebasing $branch...")
+            if (gitBranchHistory.isBrokenForRebase(commit)) {
+                println("Rebasing failed already")
+                rebaseFailedBranches += branch to commit
+                continue
+            }
+
+            val rebaseResult = defaultGit.gitRebase(branch = branch, toHead = headCommit)
+            if (rebaseResult != null) {
+                val newCommitId = rebaseResult.newCommitId
+                if (newCommitId in recentCommits) {
+                    alreadyMergedBranches += branch to newCommitId
+                    continue
+                }
+
+                otherBranches += branch to newCommitId
+                continue
+            }
+
+
+            gitBranchHistory.logRebaseFailed(commit)
+            rebaseFailedBranches += branch to commit
         }
+
+        println("Collected ${alreadyMergedBranches.size + rebaseFailedBranches.size + otherBranches.size} local Git branches with $defaultBranchPrefix")
         println()
-
-        branches = branches.filterKeys { it !in alreadyMergedBranches }
-        if (branches.isEmpty()) return
-
-        println("Rebasing ${branches.size} active branches...")
-        println("Rebase is not yet implemented.")
-        println()
-
-        val remoteBranches = defaultGit.listGitLsRemote()
-                .filterKeys { defaultSafePushBranchPredicate(it) }
-        val hashToSafePushBranches = remoteBranches.entries.groupBy({ it.value }, { it.key })
-
-        println("Collected ${remoteBranches.size} pending safe-push branches")
-        println()
-
-        val pendingBranches = branches
-                .filter { it.value in hashToSafePushBranches }
-        branches = branches.filterKeys { it !in pendingBranches }
-
-        if (pendingBranches.isNotEmpty()) {
-            //TODO: it is hard to guess if a current, but rebased branch is/was running or not
-            println("Currently pending branches:")
-            for (pendingBranch in pendingBranches) {
-                println("  ${pendingBranch.key}")
+        if (alreadyMergedBranches.isNotEmpty()) {
+            println("Already completed and merged branches:")
+            for ((branch, _) in alreadyMergedBranches) {
+                println("  $branch")
             }
             println()
         }
 
-        if (branches.isEmpty()) return
-
-        println("There are several still incomplete branches:")
-        for (pendingBranch in branches) {
-            println("  ${pendingBranch.key}")
+        if (otherBranches.isNotEmpty()) {
+            println("Pending branches:")
+            for ((branch, _) in otherBranches) {
+                println("  $branch")
+            }
+            println()
         }
-        println()
+
+        if (rebaseFailedBranches.isNotEmpty()) {
+            println("Rebase failed for branches:")
+            for ((branch, _) in rebaseFailedBranches) {
+                println("  $branch")
+            }
+            println()
+        }
     }
 }
