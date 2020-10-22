@@ -6,7 +6,7 @@ import java.util.*
 
 fun showPendingBuilds(args: List<String>) = ShowCommand().showPendingBuilds(args)
 
-private fun TermColors.printProgress(text: String) = println(bold(text))
+private fun TermColors.printProgress(text: String) = println("\n" + bold(text))
 
 private class ShowCommand {
     private val defaultGit by lazy {
@@ -48,8 +48,9 @@ private class ShowCommand {
         val rebaseFailedBranches = TreeMap<String, String>()
         val otherBranches = TreeMap<String, String>()
 
-        for ((branch, commit) in defaultGit.listGitBranches().toSortedMap()) {
-            if (!branch.startsWith(defaultBranchPrefix)) continue
+        for ((fullBranchName, commit) in defaultGit.listGitBranches().toSortedMap()) {
+            if (!fullBranchName.startsWith(defaultBranchPrefix)) continue
+            val branch = fullBranchName.removePrefix("refs/heads/")
 
             printProgress("Processing $branch...")
 
