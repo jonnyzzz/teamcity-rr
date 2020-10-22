@@ -1,6 +1,5 @@
 package com.jonnyzzz.teamcity.rr
 
-import org.slf4j.LoggerFactory
 import java.time.Duration
 import java.util.*
 
@@ -19,7 +18,7 @@ private class ShowCommand {
 
     private val defaultBranchPrefix = "refs/heads/jonnyzzz/"  //TODO: configuration?
 
-    private val gitBranchHistory by lazy { GitBranchHistory() }
+    private val history by lazy { GitBranchHistory() }
 
     fun showPendingBuilds(args: List<String>) {
         println("Checking current status...")
@@ -49,13 +48,17 @@ private class ShowCommand {
         for ((branch, commit) in defaultGit.listGitBranches().toSortedMap()) {
             if (!branch.startsWith(defaultBranchPrefix)) continue
 
+            println("")
+            println("Processing $branch...")
+            println()
+
             if (commit in recentCommits) {
                 alreadyMergedBranches += branch to commit
                 continue
             }
 
             println("Rebasing $branch...")
-            if (gitBranchHistory.isBrokenForRebase(commit)) {
+            if (history.isBrokenForRebase(commit)) {
                 println("Rebasing failed already")
                 rebaseFailedBranches += branch to commit
                 continue
@@ -74,7 +77,7 @@ private class ShowCommand {
             }
 
 
-            gitBranchHistory.logRebaseFailed(commit)
+            history.logRebaseFailed(commit)
             rebaseFailedBranches += branch to commit
         }
 
