@@ -1,6 +1,7 @@
 package com.jonnyzzz.teamcity.rr
 
 import java.io.File
+import java.time.Duration
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicReference
 import kotlin.concurrent.thread
@@ -15,62 +16,70 @@ data class ProcessResult(val exitCode: Int,
   }
 }
 
-fun execWithOutput(workDir: File = WorkDir,
-                   timeout: Long,
-                   timeoutUnit: TimeUnit,
-                   args: List<String>): ProcessResult {
-  val process = ProcessBuilder()
-          .directory(workDir)
-          .command(args.toList())
-          .redirectInput(ProcessBuilder.Redirect.PIPE)
-          .redirectOutput(ProcessBuilder.Redirect.PIPE)
-          .redirectError(ProcessBuilder.Redirect.PIPE)
-          .start()
+fun <T> execProcess(mode: ProcessExecMode<T>,
+                    workDir: File, timeout: Duration, args: List<String>): T = mode.execProcess(workDir, timeout, args)
 
-  catchAll { process.outputStream.close() }
-
-  val processOutputText = AtomicReference<String>()
-  val processErrorText = AtomicReference<String>()
-
-  val futures = listOf(
-          thread(name = "process-stdin") { processOutputText.set(process.inputStream.bufferedReader().readText()) },
-          thread(name = "process-stdout") { processErrorText.set(process.errorStream.bufferedReader().readText()) }
-  )
-
-  if (runCatching { process.waitFor(timeout, timeoutUnit) }.getOrNull() != true) {
-    catchAll { process.destroyForcibly() }
-    futures.forEach { it.interrupt() }
-    error("Failed to wait for the process to complete!")
-  }
-
-  futures.forEach { it.join() }
-  return ProcessResult(process.exitValue(), processOutputText.get().trim(), processErrorText.get().trim())
+sealed class ProcessExecMode<T> {
+  abstract fun execProcess(workDir: File,
+                           timeout: Duration,
+                           args: List<String>): T
 }
 
-fun exec(workDir: File = WorkDir,
-         timeout: Long,
-         timeoutUnit: TimeUnit,
-         args: List<String>) {
-  println("Running ${args.toList()}...")
+object WithOutput: ProcessExecMode<ProcessResult>() {
+  override fun execProcess(workDir: File, timeout: Duration, args: List<String>): ProcessResult {
+    val process = ProcessBuilder()
+            .directory(workDir)
+            .command(args.toList())
+            .redirectInput(ProcessBuilder.Redirect.PIPE)
+            .redirectOutput(ProcessBuilder.Redirect.PIPE)
+            .redirectError(ProcessBuilder.Redirect.PIPE)
+            .start()
 
-  val process = ProcessBuilder()
-          .directory(workDir)
-          .command(*args.toTypedArray())
-          .inheritIO()
-          .redirectInput(ProcessBuilder.Redirect.PIPE)
-          .start()
+    catchAll { process.outputStream.close() }
 
-  catchAll { process.outputStream.close() }
+    val processOutputText = AtomicReference<String>()
+    val processErrorText = AtomicReference<String>()
 
-  if (!process.waitFor(timeout, timeoutUnit)) {
-    catchAll { process.destroyForcibly() }
-    error("Failed to wait for the process ${args.toList()} to complete in ${TimeUnit.MINUTES.convert(timeout, timeoutUnit)} minutes")
-  }
+    val futures = listOf(
+            thread(name = "process-stdin") { processOutputText.set(process.inputStream.bufferedReader().readText()) },
+            thread(name = "process-stdout") { processErrorText.set(process.errorStream.bufferedReader().readText()) }
+    )
 
-  val code = process.exitValue()
-  println("Command ${args.toList()} exited with code: $code")
+    if (runCatching { process.waitFor(timeout.toMillis(), TimeUnit.MILLISECONDS) }.getOrNull() != true) {
+      catchAll { process.destroyForcibly() }
+      futures.forEach { it.interrupt() }
+      error("Failed to wait for the process to complete in ${timeout.toMinutes()} minutes")
+    }
 
-  if (code != 0) {
-    error("command ${args.toList()} failed with code: $code")
+    futures.forEach { catchAll { it.join() } }
+    return ProcessResult(process.exitValue(), processOutputText.get().trim(), processErrorText.get().trim())
   }
 }
+
+object WithInherit : ProcessExecMode<Unit>() {
+  override fun execProcess(workDir: File, timeout: Duration, args: List<String>) {
+    println("Running ${args.toList()}...")
+
+    val process = ProcessBuilder()
+            .directory(workDir)
+            .command(*args.toTypedArray())
+            .inheritIO()
+            .redirectInput(ProcessBuilder.Redirect.PIPE)
+            .start()
+
+    catchAll { process.outputStream.close() }
+
+    if (!process.waitFor(timeout.toMillis(), TimeUnit.MILLISECONDS)) {
+      catchAll { process.destroyForcibly() }
+      error("Failed to wait for the process ${args.toList()} to complete in ${timeout.toMinutes()} minutes")
+    }
+
+    val code = process.exitValue()
+    println("Command ${args.toList()} exited with code: $code")
+
+    if (code != 0) {
+      error("command ${args.toList()} failed with code: $code")
+    }
+  }
+}
+

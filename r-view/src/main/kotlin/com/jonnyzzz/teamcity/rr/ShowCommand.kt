@@ -9,6 +9,8 @@ private const val defaultSafePushBranchPrefix = "refs/heads/safepush/Eugene.Petr
 private const val defaultBranchPrefix = "refs/heads/jonnyzzz/"  //TODO: configuration?
 private const val defaultMergeWorkTree = "merge-work-tree"
 
+private val defaultGit = GitRunner(workdir = WorkDir)
+
 fun showPendingBuilds(args: List<String>) {
     println("Checking current status...")
     println()
@@ -16,13 +18,13 @@ fun showPendingBuilds(args: List<String>) {
     if ("--no-fetch" !in args) {
         //TODO: check if there were changes to avoid useless rebase
         println("Fetching changes from remote...")
-        gitFetch()
+        defaultGit.gitFetch()
     }
 
-    val recentCommits : Set<String> = listGitCommits("origin/master", 4096).toHashSet()
+    val recentCommits : Set<String> = defaultGit.listGitCommits("origin/master", 4096).toHashSet()
     println("Listed ${recentCommits.size} recent commits")
 
-    var branches = listGitBranches()
+    var branches = defaultGit.listGitBranches()
             .filterKeys { it.startsWith(defaultBranchPrefix) }
 
     println("Collected ${branches.size} local Git branches with $defaultBranchPrefix:")
@@ -45,7 +47,7 @@ fun showPendingBuilds(args: List<String>) {
     println("Rebase is not yet implemented.")
     println()
 
-    val remoteBranches = listGitLsRemote()
+    val remoteBranches = defaultGit.listGitLsRemote()
             .filterKeys { it.startsWith(defaultSafePushBranchPrefix) }
     val hashToSafePushBranches = remoteBranches.entries.groupBy({ it.value }, { it.key })
 

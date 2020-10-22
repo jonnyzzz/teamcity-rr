@@ -61,8 +61,9 @@ private fun theMain(args: Array<String>) {
 }
 
 private fun startNewBuild() {
-  checkGitVersion()
-  val branch = createRRBranch()
+  val git = GitRunner(WorkDir)
+  git.checkGitVersion()
+  val branch = git.createRRBranch()
   val tc = connectToTeamCity()
 
   val build = tc.buildConfiguration(branch.targetBuildConfigurationId)
@@ -91,6 +92,7 @@ private fun Sequence<Build>.teamcityRRBuilds(scope: ProducerScope<Build>) = with
 
 private fun showPendingBuilds() = runBlocking {
   val tc = connectToTeamCity()
+  val git = GitRunner(WorkDir)
 
   val allBuilds = channelFlow<Build> {
     withContext(Dispatchers.IO) {
@@ -119,7 +121,7 @@ private fun showPendingBuilds() = runBlocking {
   coroutineScope {
     allBuilds.collect { build ->
       launch(Dispatchers.Default) {
-        processOneBuild(tc, build)
+        processOneBuild(tc, git, build)
       }
     }
   }
@@ -135,9 +137,10 @@ private fun CoroutineScope.loadFailedTestsAsync(build: Build) = async(Dispatcher
 }
 
 private fun CoroutineScope.resolveNearestMasterBuildAsync(tc: TeamCityInstance,
+                                                          git: GitRunner,
                                                           params: RRBranchInfo) = async(Dispatchers.IO) {
   val commits = runCatching {
-    listGitCommits(params, 2048)
+    git.listGitCommits(params, 2048)
   }.getOrElse {
     return@async null
   }.toSet()
@@ -152,9 +155,9 @@ private fun CoroutineScope.resolveNearestMasterBuildAsync(tc: TeamCityInstance,
   masterBuild to loadFailedTestsAsync(masterBuild)
 }
 
-private suspend fun processOneBuild(tc: TeamCityInstance, build: Build) = coroutineScope {
+private suspend fun processOneBuild(tc: TeamCityInstance, git: GitRunner, build: Build) = coroutineScope {
   val logMessage = buildString {
-    buildMessage(tc, build)
+    buildMessage(tc, git, build)
   }
 
   println(logMessage)
@@ -179,7 +182,7 @@ private fun StringBuilder.appendFailures(name: String, data: List<TestRun>) {
   appendLine()
 }
 
-private suspend fun StringBuilder.buildMessage(tc: TeamCityInstance, build: Build) = coroutineScope {
+private suspend fun StringBuilder.buildMessage(tc: TeamCityInstance, git: GitRunner, build: Build) = coroutineScope {
   appendLine("${build.id} in branch ${build.branch.name}. ${build.runningInfo?.percentageComplete ?: "??"}%. ${build.status} ${build.statusText} ")
   appendLine("started on " + build.startDateTime + ", finished " + build.finishDateTime)
   val params = TeamCityRRState.loadFromBuild(build)
@@ -188,7 +191,7 @@ private suspend fun StringBuilder.buildMessage(tc: TeamCityInstance, build: Buil
   appendLine()
 
   val ourFailedTestsAsync = loadFailedTestsAsync(build)
-  val masterFailedAndTestsAsync = resolveNearestMasterBuildAsync(tc, params)
+  val masterFailedAndTestsAsync = resolveNearestMasterBuildAsync(tc, git, params)
   val ourFailedTests = ourFailedTestsAsync.await()
   val masterBuildAndFailedTests = masterFailedAndTestsAsync.await()
 

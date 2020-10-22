@@ -1,7 +1,6 @@
 package com.jonnyzzz.teamcity.rr
 
 import org.jetbrains.teamcity.rest.BuildConfigurationId
-import java.util.concurrent.TimeUnit
 
 
 data class RRBranchInfo(
@@ -12,11 +11,8 @@ data class RRBranchInfo(
         val targetBuildConfigurationId: BuildConfigurationId
 )
 
-fun createRRBranch(): RRBranchInfo {
-    val headCommit = execWithOutput(args = listOf(GIT_COMMAND, "rev-parse", "HEAD"),
-            timeout = 5,
-            timeoutUnit = TimeUnit.SECONDS
-    ).successfully().stdout.trim()
+fun GitRunner.createRRBranch(): RRBranchInfo {
+    val headCommit = gitHeadCommit()
 
     require(headCommit.length > 10) { "Failed to resolve current commit head" }
 
@@ -40,10 +36,7 @@ fun createRRBranch(): RRBranchInfo {
 
     val targetShortBranch = "$userName-${headCommit.take(8)}"
     val targetBranchName = "$customGitBranchNamePrefix/$targetShortBranch"
-    exec(args = listOf(GIT_COMMAND, "push", "origin", "$headCommit:$targetBranchName"),
-            timeout = 5,
-            timeoutUnit = TimeUnit.MINUTES
-    )
+    gitPushCommit(headCommit, targetBranchName)
 
     println("Pushed branch: $targetBranchName on commit $headCommit")
     return RRBranchInfo(
@@ -55,7 +48,7 @@ fun createRRBranch(): RRBranchInfo {
     )
 }
 
-fun listGitCommits(info: RRBranchInfo, commits: Int = 2048) : List<String>  = listGitCommits(info.commit, commits)
+fun GitRunner.listGitCommits(info: RRBranchInfo, commits: Int = 2048) : List<String>  = listGitCommits(info.commit, commits)
 
 private fun <T> firstIndexOfAny(inList: List<T>, from: Collection<T>): Int? {
     val fromSet = from.toSet()
