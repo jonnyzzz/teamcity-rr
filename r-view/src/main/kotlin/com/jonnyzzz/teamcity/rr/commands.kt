@@ -39,6 +39,9 @@ object ShowCommand : RViewCommandBase() {
 }
 
 object StartSafePushCommand : RViewCommandBase() {
+    override fun runRebase(args: List<String>): Boolean = false
+    override fun runFetch(args: List<String>): Boolean = false
+
     override fun doTheCommandImpl(snapshot: GitSnapshot, args: List<String>) {
         //TODO: it might rebase only that branch, not all
         val (branch, commit) = snapshot.pendingBranches.entries.singleOrNull { (branch) ->
