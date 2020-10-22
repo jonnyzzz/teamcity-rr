@@ -97,6 +97,48 @@ fun GitRunner.listGitCommits(head: String, commits: Int = 2048): List<String> {
     ).successfully().stdout.split("\n").map { it.trim() }.filter { it.isNotBlank() }
 }
 
+data class CommitInfo(
+        val commitId: String,
+        val authorDate: Long,
+        val author: String,
+        val subject: String
+)
+
+fun GitRunner.listGitCommitsEx(head: String, commits: Int = 2048): List<CommitInfo> {
+    val blockSep = "THIS_IS_NEXT_COMMIT"
+    val dateSep = "THIS_IS_DATE_SEP"
+    val authorSep = "THIS_IS_AUTHOR"
+    val subjectSep = "THIS_IS_COMMIT_SUBJECT"
+    val format = blockSep +
+                    "%H" +
+                    "$dateSep%ad" +
+                    "$authorSep%an" +
+                    "$subjectSep%s"
+
+    val text = execGit(
+            WithOutput,
+            command = "log",
+            args = listOf("-$commits", "--date-order", "--date=unix", "--format=$format", head),
+            timeout = Duration.ofMinutes(5),
+    ).successfully().stdout
+
+    return text
+            .splitToSequence(blockSep)
+            .map { it.trim() }
+            .filter { it.isNotBlank() }
+            .mapNotNull { block ->
+                val elements = block.splitToSequence(dateSep, authorSep, subjectSep).toList()
+                if (elements.size != 4) return@mapNotNull null
+                val (commit, date, author, subject) = elements
+                CommitInfo(
+                        commitId = commit.trim(),
+                        authorDate = date.toLongOrNull() ?: error("Failed to parse commit date: $date for $commit"),
+                        author = author.trim(),
+                        subject = subject.replace(Regex("(\n|\r|\t|\\s)+"), " ").trim()
+                )
+            }.toList()
+}
+
 fun GitRunner.showCommitShort(commit: String): String {
     //git log --topo-order --no-abbrev-commit --format='%H' 01f6cfd510ae51e6a8fa22046843a121737c8fdc
     val info = execGit(
