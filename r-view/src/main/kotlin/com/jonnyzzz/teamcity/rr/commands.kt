@@ -30,6 +30,13 @@ abstract class RViewCommandBase {
     }
 
     protected abstract fun doTheCommandImpl(snapshot: GitSnapshot, args: List<String>)
+
+    protected fun findBranchFromArgs(snapshot: GitSnapshot, args: List<String>): Pair<String, String> {
+        val (branch, commit) = snapshot.pendingBranches.entries.singleOrNull { (branch) ->
+            args.any { branch.contains(it, ignoreCase = true) }
+        } ?: throw UserErrorException("Failed to select unique branch for the command")
+        return branch to commit
+    }
 }
 
 object ShowCommand : RViewCommandBase() {
@@ -38,15 +45,26 @@ object ShowCommand : RViewCommandBase() {
     }
 }
 
+object ToggleRebaseMode : RViewCommandBase() {
+    override fun runRebase(args: List<String>): Boolean = false
+    override fun runFetch(args: List<String>): Boolean = false
+
+    override fun doTheCommandImpl(snapshot: GitSnapshot, args: List<String>) {
+        val (_, commit) = findBranchFromArgs(snapshot, args)
+        when {
+            "disable" in args -> history.logRebaseFailed(commit)
+            "enable" in args -> history.removeRebaseFailed(commit)
+            else -> throw UserErrorException("Failed to select rebase mode from args")
+        }
+    }
+}
+
 object StartSafePushCommand : RViewCommandBase() {
     override fun runRebase(args: List<String>): Boolean = false
     override fun runFetch(args: List<String>): Boolean = false
 
     override fun doTheCommandImpl(snapshot: GitSnapshot, args: List<String>) {
-        //TODO: it might rebase only that branch, not all
-        val (branch, commit) = snapshot.pendingBranches.entries.singleOrNull { (branch) ->
-            args.any { branch.contains(it, ignoreCase = true) }
-        } ?: throw UserErrorException("Failed to select unique branch for the command")
+        val (branch, commit) = findBranchFromArgs(snapshot, args)
 
         val mode = when {
             "all" in args -> "all"
@@ -61,4 +79,5 @@ object StartSafePushCommand : RViewCommandBase() {
                 "$commit:refs/heads/${branch.removePrefix("refs/heads/")}",
         ))
     }
+
 }

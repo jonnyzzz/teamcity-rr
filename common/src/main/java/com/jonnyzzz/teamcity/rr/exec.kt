@@ -81,7 +81,6 @@ object WithNoOutputSuccessfully : ProcessExecMode<Unit>() {
 
 object WithInherit : ProcessExecMode<ProcessCode>() {
   override fun execProcess(workDir: File, timeout: Duration, args: List<String>) : ProcessCode {
-    println("Running ${args.toList()}...")
 
     val process = ProcessBuilder()
             .directory(workDir)
@@ -98,8 +97,6 @@ object WithInherit : ProcessExecMode<ProcessCode>() {
     }
 
     val code = process.exitValue()
-    println("Command ${args.toList()} exited with code: $code")
-
     return ProcessCode(args, code)
   }
 }

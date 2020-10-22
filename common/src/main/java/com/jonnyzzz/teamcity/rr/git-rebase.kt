@@ -12,13 +12,10 @@ fun GitRunner.gitRebase(branch: String, toHead: String): GitRebaseResult? {
     val targetCommit = gitHeadCommit(toHead)
 
     if (branchCommit == targetCommit) {
-        println("Branch $branch and $toHead are on the same commit. No rebase is needed")
         return GitRebaseResult(targetCommit)
     }
 
     if (listGitCurrentBranchName("HEAD") == listGitCurrentBranchName(branch)) {
-        println("Rebasing local branch...")
-
         doUnderStash {
             return runRebaseAndHandleConflicts(branch, targetCommit)
         }
@@ -50,14 +47,12 @@ private fun GitRunner.runRebaseAndHandleConflicts(branch: String, targetCommit: 
         return gitHeadCommit("HEAD").let(::GitRebaseResult)
     }
 
-    println("Automatic rebase failed $branch:\n\n${code.stderr}\n\n")
-
     execGit(WithNoOutputSuccessfully, timeout = Duration.ofMinutes(5), command = "rebase", args = listOf("--abort"))
     return null
 }
 
 inline fun <Y> GitRunner.doUnderStash(action: GitRunner.() -> Y): Y {
-    val stash = execGit(WithInherit, timeout = Duration.ofMinutes(15),
+    val stash = execGit(WithOutput, timeout = Duration.ofMinutes(15),
             command = "stash", args = listOf("push"))
 
     try {

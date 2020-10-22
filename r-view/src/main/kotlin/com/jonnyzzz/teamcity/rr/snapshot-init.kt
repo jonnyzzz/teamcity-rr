@@ -34,8 +34,6 @@ fun computeCurrentStatus(defaultGit: GitRunner,
 
     val headCommit = defaultGit.gitHeadCommit("origin/master")
 
-    println("Listed ${recentCommits.size} recent commits")
-
     val alreadyMergedBranches = TreeMap<String, String>()
     val rebaseFailedBranches = TreeMap<String, String>()
     val pendingBranches = TreeMap<String, String>()
@@ -44,22 +42,17 @@ fun computeCurrentStatus(defaultGit: GitRunner,
         if (!fullBranchName.startsWith(defaultBranchPrefix)) continue
         val branch = fullBranchName.removePrefix("refs/heads/")
 
-        printProgress("Processing $branch...")
-
         if (commit in recentCommits) {
             alreadyMergedBranches += branch to commit
             continue
         }
 
-        println("Rebasing $branch...")
         if (history.isBrokenForRebase(commit)) {
-            println("Rebasing failed in a previous run")
             rebaseFailedBranches += branch to commit
             continue
         }
 
         if (!doRebase) {
-            println("Rebase is disabled")
             pendingBranches += branch to commit
             continue
         }

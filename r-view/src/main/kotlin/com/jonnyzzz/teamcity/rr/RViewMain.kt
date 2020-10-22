@@ -30,15 +30,17 @@ private fun theMain(args: List<String>) {
 
     if (args.isEmpty()) {
         println("Please select command:")
-        println("  show                              --- lists all pending safe push branches")
-        println("  push <branch> [all|compile]   --- starts a safe-push build")
+        println("  show [--no-fetch]                  --- fetch, rebase, show the current state")
+        println("  push <branch> [all|compile]        --- starts a safe-push build")
+        println("  rebase <branch> [enable|disable]   --- enabled or disabled a branch from rebase")
         println()
         exitProcess(11)
     }
 
     when (val cmd = args.getOrNull(0)?.toLowerCase()) {
-        "show" -> ShowCommand.doTheCommand(args)
+        "show", "up" -> ShowCommand.doTheCommand(args)
         "safepush", "push" -> StartSafePushCommand.doTheCommand(args)
+        "rebase" -> ToggleRebaseMode.doTheCommand(args)
         else -> throw UserErrorException("Unknown command: $cmd")
     }
 }

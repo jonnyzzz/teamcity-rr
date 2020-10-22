@@ -7,10 +7,10 @@ import java.util.*
 class TheHistory {
     private val om = jacksonObjectMapper()
     private val cacheLocation by lazy { DiskCaches.branchesCacheDir }
-    private val rebaseFailed by lazy { cacheLocation / "rebase-failed-commits.txt"}
+    private val rebaseFailedFile by lazy { cacheLocation / "rebase-failed-commits.txt"}
 
     private val brokenForRebase by lazy {
-        runCatching { rebaseFailed.readText() }.getOrElse { "" }
+        runCatching { rebaseFailedFile.readText() }.getOrElse { "" }
                 .splitToSequence("\n")
                 .map { it.trim() }
                 .filter { it.isNotBlank() }
@@ -23,8 +23,16 @@ class TheHistory {
     @Synchronized
     fun logRebaseFailed(commitId: String) {
         if (brokenForRebase.add(commitId)) {
-            rebaseFailed.parentFile?.mkdirs()
-            rebaseFailed.writeText(brokenForRebase.joinToString("\n"))
+            rebaseFailedFile.parentFile?.mkdirs()
+            rebaseFailedFile.writeText(brokenForRebase.joinToString("\n"))
+        }
+    }
+
+    @Synchronized
+    fun removeRebaseFailed(commitId: String) {
+        if (brokenForRebase.remove(commitId)) {
+            rebaseFailedFile.parentFile?.mkdirs()
+            rebaseFailedFile.writeText(brokenForRebase.joinToString("\n"))
         }
     }
 

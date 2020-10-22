@@ -19,7 +19,7 @@ fun GitSnapshot.showSnapshot() {
     }
 
     if (rebaseFailedBranches.isNotEmpty()) {
-        println("Rebase failed for branches:")
+        println("Rebase failed/disabled for branches:")
         for ((branch, _) in rebaseFailedBranches) {
             println("  $branch")
         }
