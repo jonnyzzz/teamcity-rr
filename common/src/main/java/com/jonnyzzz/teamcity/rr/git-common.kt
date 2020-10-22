@@ -1,6 +1,7 @@
 package com.jonnyzzz.teamcity.rr
 
 import java.time.Duration
+import java.util.*
 
 fun GitRunner.checkGitVersion() {
     val result = execGit(
@@ -97,7 +98,19 @@ data class CommitInfo(
         val authorDate: Long,
         val author: String,
         val subject: String
-)
+) {
+    override fun hashCode() = Objects.hash(commitId, authorDate, author)
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is CommitInfo) return false
+
+        if (commitId != other.commitId) return false
+        if (authorDate != other.authorDate) return false
+        if (author != other.author) return false
+        return true
+    }
+}
 
 fun GitRunner.listGitCommitsEx(head: String, notIn: String? = null, commits: Int = 2048): List<CommitInfo> {
     val blockSep = "THIS_IS_NEXT_COMMIT"
