@@ -39,7 +39,7 @@ allprojects {
 }
 
 application {
-  mainClassName = "com.jonnyzzz.teamcity.rr.RRMain"
+  mainClass.set("com.jonnyzzz.teamcity.rr.RRMain")
 }
 
 val distUnpacked by tasks.creating(Sync::class.java) {

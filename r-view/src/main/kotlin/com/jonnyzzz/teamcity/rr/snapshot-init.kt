@@ -5,14 +5,16 @@ import java.util.*
 
 
 private val safePushSuffix = "safepush/Eugene.Petrenko"
-private val defaultSafePushBranchPrefix = "refs/$safePushSuffix"
+val defaultSafePushBranchPrefix = "refs/$safePushSuffix"
 private val defaultLocalPushBranchPrefix = "origin/safepush"
 
 private val defaultBranchPrefix = "refs/heads/jonnyzzz/"  //TODO: configuration?
 
 fun computeCurrentStatus(defaultGit: GitRunner,
                          history: TheHistory,
-                         runFetch: Boolean): GitSnapshot {
+                         runFetch: Boolean,
+                         doRebase: Boolean,
+                         ): GitSnapshot {
     printProgress("Checking current status...")
     println()
 
@@ -36,7 +38,7 @@ fun computeCurrentStatus(defaultGit: GitRunner,
 
     val alreadyMergedBranches = TreeMap<String, String>()
     val rebaseFailedBranches = TreeMap<String, String>()
-    val otherBranches = TreeMap<String, String>()
+    val pendingBranches = TreeMap<String, String>()
 
     for ((fullBranchName, commit) in defaultGit.listGitBranches().toSortedMap()) {
         if (!fullBranchName.startsWith(defaultBranchPrefix)) continue
@@ -56,6 +58,12 @@ fun computeCurrentStatus(defaultGit: GitRunner,
             continue
         }
 
+        if (!doRebase) {
+            println("Rebase is disabled")
+            pendingBranches += branch to commit
+            continue
+        }
+
         val rebaseResult = defaultGit.gitRebase(branch = branch, toHead = headCommit)
         if (rebaseResult == null) {
             history.logRebaseFailed(commit)
@@ -69,10 +77,10 @@ fun computeCurrentStatus(defaultGit: GitRunner,
             continue
         }
 
-        otherBranches += branch to newCommitId
+        pendingBranches += branch to newCommitId
     }
 
-    printProgress("Collected ${alreadyMergedBranches.size + rebaseFailedBranches.size + otherBranches.size} local Git branches with $defaultBranchPrefix")
+    printProgress("Collected ${alreadyMergedBranches.size + rebaseFailedBranches.size + pendingBranches.size} local Git branches with $defaultBranchPrefix")
     println()
 
     return GitSnapshot(
@@ -80,6 +88,6 @@ fun computeCurrentStatus(defaultGit: GitRunner,
             headCommit = headCommit,
             alreadyMergedBranches = alreadyMergedBranches,
             rebaseFailedBranches = rebaseFailedBranches,
-            pendingBranches = otherBranches
+            pendingBranches = pendingBranches
     )
 }

@@ -36,8 +36,9 @@ private fun theMain(args: List<String>) {
     }
 
     when (val cmd = args.getOrNull(0)?.toLowerCase()) {
-        "show" -> showPendingBuilds(args)
-        else -> error("Unknown command: $cmd")
+        "show" -> ShowCommand.doTheCommand(args)
+        "safepush" -> StartSafePushCommand.doTheCommand(args)
+        else -> throw UserErrorException("Unknown command: $cmd")
     }
 }
 
