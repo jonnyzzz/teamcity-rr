@@ -10,10 +10,14 @@ class TheHistory {
     private val rebaseFailed by lazy { cacheLocation / "rebase-failed-commits.txt"}
 
     private val brokenForRebase by lazy {
-        val newSet = runCatching { rebaseFailed.readText() }.getOrElse { "" }.split("\n")
-        TreeSet(newSet)
+        runCatching { rebaseFailed.readText() }.getOrElse { "" }
+                .splitToSequence("\n")
+                .map { it.trim() }
+                .filter { it.isNotBlank() }
+                .toCollection(TreeSet())
     }
 
+    @Synchronized
     fun isBrokenForRebase(commitId: String) = commitId in brokenForRebase
 
     @Synchronized
