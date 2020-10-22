@@ -5,8 +5,7 @@ plugins {
 
 dependencies {
     api(kotlin("stdlib-jdk8"))
-
-    api(kotlin("stdlib-jdk8"))
+    api(kotlin("reflect"))
 
     api("org.jetbrains.teamcity:teamcity-rest-client")
 
