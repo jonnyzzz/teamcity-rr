@@ -31,7 +31,7 @@ val installToOs by tasks.creating(Copy::class.java) {
     dependsOn(tasks.distZip)
     group = "distribution"
     from({ zipTree(tasks.distZip.get().archiveFile) })
-    into("installRoot")
+    into("$installRoot")
     includeEmptyDirs = false
     eachFile { path = path.split("/", limit = 2)[1] }
     doFirst { delete("$buildDir/unpacked") }

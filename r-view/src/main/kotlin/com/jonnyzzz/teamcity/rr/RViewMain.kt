@@ -30,7 +30,8 @@ private fun theMain(args: List<String>) {
 
     if (args.isEmpty()) {
         println("Please select command:")
-        println("  show --- lists all pending safe push branches")
+        println("  show                              --- lists all pending safe push branches")
+        println("  safepush <branch> [all|compile]   --- starts a safe-push build")
         println()
         exitProcess(11)
     }
