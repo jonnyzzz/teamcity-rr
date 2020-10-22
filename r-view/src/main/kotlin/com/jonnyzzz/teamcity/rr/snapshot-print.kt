@@ -25,6 +25,8 @@ fun GitSnapshot.showSnapshot() {
         }
         println()
     }
+
+    println("Use `r-view rebase <branch> disable` to remove unnecessary branches from regular rebasing")
 }
 
 private fun GitSnapshot.formatBranchWithInfo(branch: String): String {
