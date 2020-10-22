@@ -6,16 +6,26 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicReference
 import kotlin.concurrent.thread
 
-data class ProcessResult(val args: List<String>,
-                         val exitCode: Int,
-                         val stdout: String,
-                         val stderr: String) {
-
-  fun successfully() = when (exitCode) {
+open class ProcessCode(val args: List<String>,
+                  val exitCode: Int) {
+  open fun successfully() = when (exitCode) {
     0 -> this
-    else -> error("Command failed with code $exitCode: " + args.joinToString(" ") { "'$it'" } + "\n" + stderr)
+    else -> error("Command failed with code $exitCode: " + args.joinToString(" ") { "'$it'" } + stderrMessage())
   }
+
+  protected open fun stderrMessage() = ""
 }
+
+class ProcessResult(args: List<String>,
+                    exitCode: Int,
+                    val stdout: String,
+                    val stderr: String) : ProcessCode(args, exitCode) {
+
+  override fun successfully() = super.successfully() as ProcessResult
+
+  override fun stderrMessage() = "\n" + stderr
+}
+
 
 fun <T> execProcess(mode: ProcessExecMode<T>,
                     workDir: File, timeout: Duration, args: List<String>): T = mode.execProcess(workDir, timeout, args)
@@ -57,8 +67,14 @@ object WithOutput: ProcessExecMode<ProcessResult>() {
   }
 }
 
-object WithInherit : ProcessExecMode<Unit>() {
+object WithInheritSuccessfully : ProcessExecMode<Unit>() {
   override fun execProcess(workDir: File, timeout: Duration, args: List<String>) {
+    WithInherit.execProcess(workDir, timeout, args).successfully()
+  }
+}
+
+object WithInherit : ProcessExecMode<ProcessCode>() {
+  override fun execProcess(workDir: File, timeout: Duration, args: List<String>) : ProcessCode {
     println("Running ${args.toList()}...")
 
     val process = ProcessBuilder()
@@ -78,9 +94,7 @@ object WithInherit : ProcessExecMode<Unit>() {
     val code = process.exitValue()
     println("Command ${args.toList()} exited with code: $code")
 
-    if (code != 0) {
-      error("command ${args.toList()} failed with code: $code")
-    }
+    return ProcessCode(args, code)
   }
 }
 

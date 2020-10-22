@@ -1,23 +1,6 @@
 package com.jonnyzzz.teamcity.rr
 
-import java.io.File
 import java.time.Duration
-
-private const val ENV_GIT_COMMAND = "TEAMCITY_RR_GIT"
-private val GIT_COMMAND = System.getenv(ENV_GIT_COMMAND) ?: "git"
-
-class GitRunner(
-        private val workdir: File,
-        private val gitDir: File = workdir / ".git"
-) {
-    fun <T> execGit(mode: ProcessExecMode<T>,
-                    timeout: Duration,
-                    command: String,
-                    args: List<String> = listOf()): T = execProcess(mode,
-            workDir = workdir,
-            timeout = timeout,
-            args = listOf(GIT_COMMAND, "--git-dir=$gitDir") + command + args)
-}
 
 fun GitRunner.checkGitVersion() {
     val result = execGit(
@@ -27,9 +10,7 @@ fun GitRunner.checkGitVersion() {
     )
 
     if (result.exitCode != 0) {
-        throw UserErrorException("Failed to execute `$GIT_COMMAND version` command. " +
-                "Please check you have configured git in system path or set the " +
-                "`$ENV_GIT_COMMAND` environment variable with the correct path.")
+        throwFailedToExecuteGit()
     }
 
     val gitVersion = result.stdout.trim().removePrefix("git version").trim()
@@ -44,7 +25,7 @@ fun GitRunner.checkGitVersion() {
 
 
 fun GitRunner.gitFetch() {
-    execGit(WithInherit,
+    execGit(WithInheritSuccessfully,
             command = "fetch",
             timeout = Duration.ofMinutes(10)
     )
@@ -78,11 +59,11 @@ fun GitRunner.listGitLsRemote(): Map<String, String> {
             .toMap().toSortedMap()
 }
 
-fun GitRunner.listGitCurrentBranchName(): String {
+fun GitRunner.listGitCurrentBranchName(ref: String = "HEAD"): String {
     return execGit(
             WithOutput,
             command = "rev-parse",
-            args = listOf("--symbolic-full-name", "HEAD"),
+            args = listOf("--symbolic-full-name", ref),
             timeout = Duration.ofSeconds(5),
     ).successfully().stdout.trim()
 }
@@ -166,18 +147,18 @@ fun GitRunner.generateDiffStat(commits: List<String>): String {
 
 fun GitRunner.gitPushCommit(headCommit: String, targetBranchName: String) {
     execGit(
-            WithInherit,
+            WithInheritSuccessfully,
             command = "push",
             args = listOf("origin", "$headCommit:$targetBranchName"),
             timeout = Duration.ofMinutes(5),
     )
 }
 
-fun GitRunner.gitHeadCommit(): String {
+fun GitRunner.gitHeadCommit(head : String = "HEAD"): String {
     return execGit(
             WithOutput,
             command = "rev-parse",
-            args = listOf("HEAD"),
+            args = listOf(head),
             timeout = Duration.ofSeconds(5),
     ).successfully().stdout.trim()
 }

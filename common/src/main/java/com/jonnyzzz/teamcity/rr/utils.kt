@@ -13,6 +13,7 @@ inline fun catchAll(action: () -> Unit) {
 }
 
 operator fun File.div(path: String) = File(this, path)
+operator fun File.plus(path: String) = File(this.parent, name + path)
 
 operator fun Path.div(path: String): Path = resolve(path)
 

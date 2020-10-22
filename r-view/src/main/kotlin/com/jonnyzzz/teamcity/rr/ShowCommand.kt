@@ -26,6 +26,15 @@ private class ShowCommand {
         println("Checking current status...")
         println()
 
+
+        val history = defaultGit.listGitCommitsEx("exp1", notIn = "origin/master")
+        println(history)
+
+        defaultGit.gitRebase("exp1", "origin/master")
+        defaultGit.gitRebase("exp3", "origin/master")
+
+        return
+
         if ("--no-fetch" !in args) {
             //TODO: check if there were changes to avoid useless rebase
             println("Fetching changes from remote...")
