@@ -104,7 +104,7 @@ data class CommitInfo(
         val subject: String
 )
 
-fun GitRunner.listGitCommitsEx(head: String, commits: Int = 2048): List<CommitInfo> {
+fun GitRunner.listGitCommitsEx(head: String, notIn: String? = null, commits: Int = 2048): List<CommitInfo> {
     val blockSep = "THIS_IS_NEXT_COMMIT"
     val dateSep = "THIS_IS_DATE_SEP"
     val authorSep = "THIS_IS_AUTHOR"
@@ -118,7 +118,10 @@ fun GitRunner.listGitCommitsEx(head: String, commits: Int = 2048): List<CommitIn
     val text = execGit(
             WithOutput,
             command = "log",
-            args = listOf("-$commits", "--date-order", "--date=unix", "--format=$format", head),
+            args = listOf("-$commits", "--date-order", "--date=unix", "--format=$format") + when {
+                notIn != null -> "$notIn..$head"
+                else -> head
+            },
             timeout = Duration.ofMinutes(5),
     ).successfully().stdout
 
