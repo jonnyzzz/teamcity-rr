@@ -1,6 +1,5 @@
 package com.jonnyzzz.teamcity.rr
 
-import org.slf4j.LoggerFactory
 import java.io.File
 import java.time.Duration
 
@@ -8,11 +7,9 @@ private const val ENV_GIT_COMMAND = "TEAMCITY_RR_GIT"
 private val GIT_COMMAND = System.getenv(ENV_GIT_COMMAND) ?: "git"
 
 class GitRunner(
-        val workdir: File,
-        val gitDir: File = workdir
+        private val workdir: File,
+        private val gitDir: File = workdir / ".git"
 ) {
-    private val LOG = LoggerFactory.getLogger(GitRunner::class.java)
-
     fun <T> execGit(mode: ProcessExecMode<T>,
                     timeout: Duration,
                     command: String,
@@ -37,6 +34,12 @@ fun GitRunner.checkGitVersion() {
 
     val gitVersion = result.stdout.trim().removePrefix("git version").trim()
     println("Using git version: $gitVersion")
+
+    val versionElements = gitVersion.split(".").map { it.toIntOrNull() }
+
+    require(versionElements.first() == 2 && versionElements.getOrNull(1)?.let { it >= 29 } == true) {
+        "You must have git at least of 2.29 and less than 3.x, but was: $gitVersion"
+    }
 }
 
 
@@ -61,7 +64,8 @@ fun GitRunner.listGitBranches(): Map<String, String> {
 }
 
 fun GitRunner.listGitLsRemote(): Map<String, String> {
-    return execGit(WithOutput,
+    return execGit(
+            WithOutput,
             command = "ls-remote",
             timeout = Duration.ofMinutes(1),
     ).successfully().stdout.split("\n").map { it.trim() }.filter { it.isNotBlank() }
@@ -75,7 +79,8 @@ fun GitRunner.listGitLsRemote(): Map<String, String> {
 }
 
 fun GitRunner.listGitCurrentBranchName(): String {
-    return execGit(WithOutput,
+    return execGit(
+            WithOutput,
             command = "rev-parse",
             args = listOf("--symbolic-full-name", "HEAD"),
             timeout = Duration.ofSeconds(5),
@@ -84,7 +89,8 @@ fun GitRunner.listGitCurrentBranchName(): String {
 
 fun GitRunner.listGitCommits(head: String, commits: Int = 2048): List<String> {
     //git log --topo-order --no-abbrev-commit --format='%H' 01f6cfd510ae51e6a8fa22046843a121737c8fdc
-    return execGit(WithOutput,
+    return execGit(
+            WithOutput,
             command = "log",
             args = listOf("-$commits", "--topo-order", "--format=%H", head),
             timeout = Duration.ofMinutes(5),
@@ -93,7 +99,8 @@ fun GitRunner.listGitCommits(head: String, commits: Int = 2048): List<String> {
 
 fun GitRunner.showCommitShort(commit: String): String {
     //git log --topo-order --no-abbrev-commit --format='%H' 01f6cfd510ae51e6a8fa22046843a121737c8fdc
-    val info = execGit(WithOutput,
+    val info = execGit(
+            WithOutput,
             command = "show",
             args = listOf("--pretty=oneline", commit),
             timeout = Duration.ofSeconds(5),
@@ -104,7 +111,8 @@ fun GitRunner.showCommitShort(commit: String): String {
 
 fun GitRunner.generateDiffStat(commits: List<String>): String {
     //git log --topo-order --no-abbrev-commit --format='%H' 01f6cfd510ae51e6a8fa22046843a121737c8fdc
-    return execGit(WithOutput,
+    return execGit(
+            WithOutput,
             command = "diff",
             args = listOf("--stat", *commits.toTypedArray()),
             timeout = Duration.ofSeconds(5),
@@ -127,4 +135,21 @@ fun GitRunner.gitHeadCommit(): String {
             args = listOf("HEAD"),
             timeout = Duration.ofSeconds(5),
     ).successfully().stdout.trim()
+}
+
+data class GitUserEmail(val email: String) {
+    val user = email.split("@").first()
+}
+
+fun GitRunner.getUserEmail(): GitUserEmail {
+    val output =
+            execGit(WithOutput,
+                    command = "config", args = listOf("--get", "user.email"),
+                    timeout = Duration.ofSeconds(4)
+            ).successfully().stdout.trim()
+
+    require(output.contains("@")) {
+        "Git user.email is bogus: $output"
+    }
+    return GitUserEmail(output)
 }

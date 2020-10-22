@@ -6,13 +6,14 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicReference
 import kotlin.concurrent.thread
 
-data class ProcessResult(val exitCode: Int,
+data class ProcessResult(val args: List<String>,
+                         val exitCode: Int,
                          val stdout: String,
                          val stderr: String) {
 
   fun successfully() = when (exitCode) {
     0 -> this
-    else -> error("Command failed with code $exitCode")
+    else -> error("Command failed with code $exitCode: " + args.joinToString(" ") { "'$it'" } + "\n" + stderr)
   }
 }
 
@@ -52,7 +53,7 @@ object WithOutput: ProcessExecMode<ProcessResult>() {
     }
 
     futures.forEach { catchAll { it.join() } }
-    return ProcessResult(process.exitValue(), processOutputText.get().trim(), processErrorText.get().trim())
+    return ProcessResult(args, process.exitValue(), processOutputText.get().trim(), processErrorText.get().trim())
   }
 }
 
