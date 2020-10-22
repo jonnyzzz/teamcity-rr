@@ -7,7 +7,8 @@ import java.util.*
 class TheHistory {
     private val om = jacksonObjectMapper()
     private val cacheLocation by lazy { DiskCaches.branchesCacheDir }
-    private val rebaseFailedFile by lazy { cacheLocation / "rebase-failed-commits.txt"}
+    private val rebaseFailedFile by lazy { cacheLocation / "rebase-failed-commits.txt" }
+    private fun branchForCommitsFile(branch: String) = cacheLocation / "branch-commits" + branch.sha256() + ".txt"
 
     private val brokenForRebase by lazy {
         runCatching { rebaseFailedFile.readText() }.getOrElse { "" }
@@ -37,7 +38,7 @@ class TheHistory {
     }
 
     fun updateCommitsFor(branch: String, uniqueCommits: List<CommitInfo>) {
-        val branchFile = cacheLocation / "branch-" + branch.sha256()
+        val branchFile = branchForCommitsFile(branch)
         if (uniqueCommits.isEmpty()) {
             branchFile.delete()
             return
@@ -48,12 +49,12 @@ class TheHistory {
         branchFile.writeText(text)
     }
 
-    fun lookupCommitsFor(branch: String) : List<CommitInfo> {
-        val branchFile = cacheLocation / "branch-" + branch.sha256()
+    fun lookupCommitsFor(branch: String): List<CommitInfo> {
+        val branchFile = branchForCommitsFile(branch)
         if (!branchFile.isFile) return listOf()
 
         return try {
-            om.readValue(branch, object: TypeReference<List<CommitInfo>>(){})
+            om.readValue(branch, object : TypeReference<List<CommitInfo>>() {})
         } catch (t: Throwable) {
             branchFile.delete()
             listOf()
