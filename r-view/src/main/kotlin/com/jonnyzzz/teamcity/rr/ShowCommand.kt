@@ -1,9 +1,12 @@
 package com.jonnyzzz.teamcity.rr
 
+import com.github.ajalt.mordant.TermColors
 import java.time.Duration
 import java.util.*
 
 fun showPendingBuilds(args: List<String>) = ShowCommand().showPendingBuilds(args)
+
+private fun TermColors.printProgress(text: String) = println(bold(text))
 
 private class ShowCommand {
     private val defaultGit by lazy {
@@ -20,12 +23,12 @@ private class ShowCommand {
 
     private val history by lazy { GitBranchHistory() }
 
-    fun showPendingBuilds(args: List<String>) {
-        println("Checking current status...")
+    fun showPendingBuilds(args: List<String>) = TermColors().run {
+        printProgress("Checking current status...")
         println()
 
         if ("--no-fetch" !in args) {
-            println("Fetching changes from remote...")
+            printProgress("Fetching changes from remote...")
             defaultGit.execGit(WithInheritSuccessfully, timeout = Duration.ofMinutes(10),
                     command = "fetch",
                     args = listOf("--prune", "origin",
@@ -48,9 +51,7 @@ private class ShowCommand {
         for ((branch, commit) in defaultGit.listGitBranches().toSortedMap()) {
             if (!branch.startsWith(defaultBranchPrefix)) continue
 
-            println("")
-            println("Processing $branch...")
-            println()
+            printProgress("Processing $branch...")
 
             if (commit in recentCommits) {
                 alreadyMergedBranches += branch to commit
@@ -59,29 +60,28 @@ private class ShowCommand {
 
             println("Rebasing $branch...")
             if (history.isBrokenForRebase(commit)) {
-                println("Rebasing failed already")
+                println("Rebasing failed in a previous run")
                 rebaseFailedBranches += branch to commit
                 continue
             }
 
             val rebaseResult = defaultGit.gitRebase(branch = branch, toHead = headCommit)
-            if (rebaseResult != null) {
-                val newCommitId = rebaseResult.newCommitId
-                if (newCommitId in recentCommits) {
-                    alreadyMergedBranches += branch to newCommitId
-                    continue
-                }
-
-                otherBranches += branch to newCommitId
+            if (rebaseResult == null) {
+                history.logRebaseFailed(commit)
+                rebaseFailedBranches += branch to commit
                 continue
             }
 
+            val newCommitId = rebaseResult.newCommitId
+            if (newCommitId in recentCommits) {
+                alreadyMergedBranches += branch to newCommitId
+                continue
+            }
 
-            history.logRebaseFailed(commit)
-            rebaseFailedBranches += branch to commit
+            otherBranches += branch to newCommitId
         }
 
-        println("Collected ${alreadyMergedBranches.size + rebaseFailedBranches.size + otherBranches.size} local Git branches with $defaultBranchPrefix")
+        printProgress("Collected ${alreadyMergedBranches.size + rebaseFailedBranches.size + otherBranches.size} local Git branches with $defaultBranchPrefix")
         println()
         if (alreadyMergedBranches.isNotEmpty()) {
             println("Already completed and merged branches:")

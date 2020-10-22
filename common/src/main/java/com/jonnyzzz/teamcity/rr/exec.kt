@@ -73,6 +73,12 @@ object WithInheritSuccessfully : ProcessExecMode<Unit>() {
   }
 }
 
+object WithNoOutputSuccessfully : ProcessExecMode<Unit>() {
+  override fun execProcess(workDir: File, timeout: Duration, args: List<String>) {
+    WithOutput.execProcess(workDir, timeout, args).successfully()
+  }
+}
+
 object WithInherit : ProcessExecMode<ProcessCode>() {
   override fun execProcess(workDir: File, timeout: Duration, args: List<String>) : ProcessCode {
     println("Running ${args.toList()}...")

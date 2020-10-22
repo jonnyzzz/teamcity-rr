@@ -56,7 +56,7 @@ class GitWorktreeBase(
         tempGit.run {
             if (!isValidGitCheckout) {
                 workdir.mkdirs()
-                execGit(WithInheritSuccessfully, bare = true, timeout = Duration.ofSeconds(5), command = "init")
+                execGit(WithNoOutputSuccessfully, bare = true, timeout = Duration.ofSeconds(5), command = "init")
             }
 
             //it's worth to rewrite alternates, just in case
