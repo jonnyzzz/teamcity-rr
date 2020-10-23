@@ -26,6 +26,14 @@ fun GitSnapshot.showSnapshot() {
         println()
     }
 
+    printWithHighlighting {
+        "Current branch: " + bold(headBranch) + " " +
+                when {
+                    headToMasterCommits.isEmpty() -> "no new commits"
+                    else -> "" + headToMasterCommits.size + " unique changes"
+                } + "\n\n"
+    }
+
     println("Use `r-view rebase <branch> disable` to remove unnecessary branches from regular rebasing")
 }
 

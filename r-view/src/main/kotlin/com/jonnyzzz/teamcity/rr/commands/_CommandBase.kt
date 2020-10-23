@@ -35,9 +35,11 @@ abstract class CommandBase {
     }
 
     private fun Session.buildSnapshot(): GitSnapshot {
+        val lightSnapshot = computeLightSnapshot(defaultGit)
+
         if (preferSnapshot) {
             val snapshot = history.loadSnapshot()
-            if (snapshot != null && snapshot.created.toInstant().until(Instant.now(), ChronoUnit.HOURS) < 2) {
+            if (snapshot != null && snapshot.hasSameLight(lightSnapshot)) {
                 println("Using persisted snapshot from ${snapshot.created}")
                 return snapshot
             }
@@ -45,6 +47,7 @@ abstract class CommandBase {
 
         var snapshot =
                 computeCurrentStatus(
+                        lightSnapshot = lightSnapshot,
                         runFetch = runFetch,
                         defaultGit = defaultGit,
                         doRebase = runRebase,

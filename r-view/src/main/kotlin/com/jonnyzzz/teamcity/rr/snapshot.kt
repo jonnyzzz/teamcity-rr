@@ -3,9 +3,16 @@ package com.jonnyzzz.teamcity.rr
 import com.fasterxml.jackson.annotation.JsonIgnore
 import java.util.*
 
+data class LightSnapshot(
+        val masterCommit: String,
+        val headBranch: String,
+        val headCommit: String,
+)
+
 data class GitSnapshot(
         val masterCommits: Map<String, CommitInfo>,
-        val headCommit: String,
+        private val lightSnapshot: LightSnapshot,
+        val headToMasterCommits : List<CommitInfo>,
 
         val alreadyMergedBranches: Map<String, String>,
         val rebaseFailedBranches: Map<String, String>,
@@ -16,6 +23,18 @@ data class GitSnapshot(
 
         val created: Date = Date(),
 ) {
+
+    fun hasSameLight(snapshot: LightSnapshot) = this.lightSnapshot == lightSnapshot
+
+    @get:JsonIgnore
+    val masterCommit by lightSnapshot::masterCommit
+
+    @get:JsonIgnore
+    val headCommit by lightSnapshot::headCommit
+
+    @get:JsonIgnore
+    val headBranch by lightSnapshot::headBranch
+
     @get:JsonIgnore
     val allBranchNames : Set<String> = listOf(alreadyMergedBranches.keys, rebaseFailedBranches.keys, pendingBranches.keys).flatMapTo(TreeSet()) {it}
 

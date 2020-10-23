@@ -4,13 +4,23 @@ import java.time.Duration
 import java.util.*
 
 
-private val defaultBranchPrefix = "refs/heads/jonnyzzz/"  //TODO: configuration?
+private const val defaultBranchPrefix = "refs/heads/jonnyzzz/"  //TODO: configuration?
 
-fun computeCurrentStatus(defaultGit: GitRunner,
-                         history: TheHistory,
-                         runFetch: Boolean,
-                         doRebase: Boolean,
-                         ): GitSnapshot {
+fun computeLightSnapshot(defaultGit: GitRunner): LightSnapshot {
+    return LightSnapshot(
+            masterCommit = defaultGit.gitHeadCommit("origin/master"),
+            headCommit = defaultGit.gitHeadCommit("HEAD"),
+            headBranch = defaultGit.listGitCurrentBranchName("HEAD").removePrefix("refs/heads/"),
+    )
+}
+
+fun computeCurrentStatus(
+        lightSnapshot: LightSnapshot,
+        defaultGit: GitRunner,
+        history: TheHistory,
+        runFetch: Boolean,
+        doRebase: Boolean,
+): GitSnapshot {
     printProgress("Checking current status...")
     println()
 
@@ -28,8 +38,6 @@ fun computeCurrentStatus(defaultGit: GitRunner,
 
     val recentCommits = defaultGit.listGitCommitsEx("origin/master", commits = 2048)
             .associateBy { it.commitId }
-
-    val headCommit = defaultGit.gitHeadCommit("origin/master")
 
     val alreadyMergedBranches = TreeMap<String, String>()
     val rebaseFailedBranches = TreeMap<String, String>()
@@ -54,7 +62,7 @@ fun computeCurrentStatus(defaultGit: GitRunner,
             continue
         }
 
-        val rebaseResult = defaultGit.gitRebase(branch = branch, toHead = headCommit)
+        val rebaseResult = defaultGit.gitRebase(branch = branch, toHead = lightSnapshot.masterCommit)
         if (rebaseResult == null) {
             history.logRebaseFailed(commit)
             rebaseFailedBranches += branch to commit
@@ -73,9 +81,15 @@ fun computeCurrentStatus(defaultGit: GitRunner,
     printProgress("Collected ${alreadyMergedBranches.size + rebaseFailedBranches.size + pendingBranches.size} local Git branches with $defaultBranchPrefix")
     println()
 
+    val headToMasterCommits = when {
+        lightSnapshot.headCommit == lightSnapshot.masterCommit -> listOf()
+        else -> defaultGit.listGitCommitsEx(lightSnapshot.headBranch, notIn = "origin/master")
+    }
+
     return GitSnapshot(
+            lightSnapshot = lightSnapshot,
+            headToMasterCommits = headToMasterCommits,
             masterCommits = recentCommits,
-            headCommit = headCommit,
             alreadyMergedBranches = alreadyMergedBranches,
             rebaseFailedBranches = rebaseFailedBranches,
             pendingBranches = pendingBranches
