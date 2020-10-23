@@ -31,7 +31,7 @@ fun computeCurrentStatus(
                 args = listOf(
                         "--prune", "--no-tags", "--keep",
                         "origin",
-                        "refs/heads/master:origin/master",
+                        "refs/heads/master:refs/remotes/origin/master",
 //                            "$defaultSafePushBranchPrefix/*:$defaultLocalPushBranchPrefix/*"
                 ))
     }
