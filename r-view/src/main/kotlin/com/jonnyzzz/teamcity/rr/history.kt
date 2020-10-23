@@ -8,6 +8,7 @@ data class SafePushBranchInfo(
         val branch: String,
         val safePushBranch: String,
         val commitId: String,
+        val mode: SafePushMode,
         val created: Date = Date()
 )
 

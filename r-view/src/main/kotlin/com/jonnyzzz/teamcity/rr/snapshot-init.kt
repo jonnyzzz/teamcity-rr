@@ -4,10 +4,6 @@ import java.time.Duration
 import java.util.*
 
 
-private val safePushSuffix = "safepush/Eugene.Petrenko"
-val defaultSafePushBranchPrefix = "refs/$safePushSuffix"
-private val defaultLocalPushBranchPrefix = "origin/safepush"
-
 private val defaultBranchPrefix = "refs/heads/jonnyzzz/"  //TODO: configuration?
 
 fun computeCurrentStatus(defaultGit: GitRunner,

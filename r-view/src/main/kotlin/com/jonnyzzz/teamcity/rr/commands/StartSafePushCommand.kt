@@ -12,12 +12,12 @@ object StartSafePushCommand : CommandBase() {
         val (branch, commit) = findBranchFromArgs(snapshot.pendingBranches, args)
 
         val mode = when {
-            "all" in args -> "all"
-            "compile" in args -> "compile"
+            "all" in args -> SafePushMode.ALL
+            "compile" in args -> SafePushMode.COMPILE
             else -> throw UserErrorException("Failed to select safe-push type: [all, compile]")
         }
 
-        val safePushBranch = "$defaultSafePushBranchPrefix/master/j${commit.take(8)}/$mode"
+        val safePushBranch = mode.safePushBranch(commit)
         defaultGit.execGit(WithInheritSuccessfully, timeout = Duration.ofMinutes(5),
                 command = "push", args = listOf(
                 "origin",
@@ -29,7 +29,8 @@ object StartSafePushCommand : CommandBase() {
         history.addSafePushBranch(SafePushBranchInfo(
                 branch = branch,
                 safePushBranch = safePushBranch,
-                commitId = commit
+                commitId = commit,
+                mode = mode,
         ))
 
         invalidateSnapshot()
