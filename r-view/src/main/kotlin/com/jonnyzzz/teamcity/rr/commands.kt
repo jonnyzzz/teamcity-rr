@@ -26,6 +26,7 @@ abstract class RViewCommandBase {
                 history = history,
         )
         snapshot = collectChangesForPendingBranches(defaultGit, history, snapshot)
+        history.saveSnapshot(snapshot)
         return snapshot
     }
 

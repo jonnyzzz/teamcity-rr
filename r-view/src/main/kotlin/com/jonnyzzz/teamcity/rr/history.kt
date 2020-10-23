@@ -8,7 +8,8 @@ class TheHistory {
     private val om = jacksonObjectMapper()
     private val cacheLocation by lazy { DiskCaches.branchesCacheDir }
     private val rebaseFailedFile by lazy { cacheLocation / "rebase-failed-commits.txt" }
-    private fun branchForCommitsFile(branch: String) = cacheLocation / "branch-commits" + branch.sha256() + ".txt"
+    private val snapshotFile by lazy { cacheLocation / "state.json" }
+    private fun branchForCommitsFile(branch: String) = cacheLocation / "branch-commits" + branch.replace(Regex("[^\\w\\d\\-]+"), "-") + ".txt"
 
     private val brokenForRebase by lazy {
         runCatching { rebaseFailedFile.readText() }.getOrElse { "" }
@@ -16,6 +17,20 @@ class TheHistory {
                 .map { it.trim() }
                 .filter { it.isNotBlank() }
                 .toCollection(TreeSet())
+    }
+
+    fun saveSnapshot(snapshot: GitSnapshot) {
+        snapshotFile.parentFile?.mkdirs()
+        om.writerWithDefaultPrettyPrinter().writeValue(snapshotFile, snapshot)
+    }
+
+    fun loadSnapshot() : GitSnapshot? {
+        return try {
+            om.readValue(snapshotFile, GitSnapshot::class.java)
+        } catch (t: Throwable) {
+            snapshotFile.delete()
+            null
+        }
     }
 
     @Synchronized
@@ -44,15 +59,12 @@ class TheHistory {
             return
         }
 
-        val text = om.writerWithDefaultPrettyPrinter().writeValueAsString(uniqueCommits)
         branchFile.parentFile?.mkdirs()
-        branchFile.writeText(text)
+        om.writerWithDefaultPrettyPrinter().writeValue(branchFile, uniqueCommits)
     }
 
     fun lookupCommitsFor(branch: String): List<CommitInfo> {
         val branchFile = branchForCommitsFile(branch)
-        if (!branchFile.isFile) return listOf()
-
         return try {
             om.readValue(branch, object : TypeReference<List<CommitInfo>>() {})
         } catch (t: Throwable) {
