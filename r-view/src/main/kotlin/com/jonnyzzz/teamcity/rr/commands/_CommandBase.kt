@@ -52,6 +52,7 @@ abstract class CommandBase {
                 )
 
         snapshot = collectChangesForPendingBranches(defaultGit, history, snapshot)
+        snapshot = collectSafePushInfoForBranches(defaultGit, history, snapshot)
         history.saveSnapshot(snapshot)
         return snapshot
     }

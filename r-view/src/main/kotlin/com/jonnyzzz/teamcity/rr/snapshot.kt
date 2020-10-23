@@ -12,9 +12,13 @@ data class GitSnapshot(
         val pendingBranches: Map<String, String>,
 
         val branchToUniqueCommits: Map<String, List<CommitInfo>> = mapOf(),
+        val branchToSafePushes : Map<String, List<SafePushBranchInfo>> = mapOf(),
 
         val created: Date = Date(),
 ) {
+    @get:JsonIgnore
+    val allBranchNames : Set<String> = listOf(alreadyMergedBranches.keys, rebaseFailedBranches.keys, pendingBranches.keys).flatMapTo(TreeSet()) {it}
+
     @get:JsonIgnore
     val masterCommitInfos: Map<CommitInfo, CommitInfo> by lazy { masterCommits.values.toHashSet().associateBy { it } }
 }

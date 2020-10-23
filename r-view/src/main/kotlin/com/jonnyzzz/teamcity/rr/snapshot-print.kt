@@ -33,12 +33,17 @@ private fun GitSnapshot.formatBranchWithInfo(branch: String): String {
     return buildString {
         append("  ")
         append(branch.padEnd(39))
+
         val uniqueCommits = branchToUniqueCommits[branch]
         if (uniqueCommits != null) {
-            append(" ")
-            append(uniqueCommits.size)
-            append(" unique commits")
+            append("${uniqueCommits.size} unique commits".padStart(17))
+        } else {
+            append("".padStart(20))
+        }
+
+        val safePushes = branchToSafePushes[branch]
+        if (safePushes != null && safePushes.isNotEmpty()) {
+            append("  " + safePushes.size + " safe pushes")
         }
     }
 }
-
