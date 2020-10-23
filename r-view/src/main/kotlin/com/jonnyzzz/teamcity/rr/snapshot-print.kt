@@ -33,7 +33,7 @@ private fun GitSnapshot.formatBranchWithInfo(branch: String): String {
     return buildString {
         append("  ")
         append(branch.padEnd(39))
-        val uniqueCommits = get(GitLogKey)?.get(branch)
+        val uniqueCommits = branchToUniqueCommits[branch]
         if (uniqueCommits != null) {
             append(" ")
             append(uniqueCommits.size)

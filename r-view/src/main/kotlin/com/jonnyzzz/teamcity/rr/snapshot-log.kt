@@ -2,8 +2,6 @@ package com.jonnyzzz.teamcity.rr
 
 import java.util.*
 
-val GitLogKey = newUserDataKey<Map<String, List<CommitInfo>>> { mapOf() }
-
 fun collectChangesForPendingBranches(defaultGit: GitRunner,
                                      history: TheHistory,
                                      snapshot: GitSnapshot): GitSnapshot {
@@ -23,5 +21,5 @@ fun collectChangesForPendingBranches(defaultGit: GitRunner,
         }
     }
 
-    return snapshot.withUserData(GitLogKey, branches)
+    return snapshot.copy(branchToUniqueCommits = branches)
 }
