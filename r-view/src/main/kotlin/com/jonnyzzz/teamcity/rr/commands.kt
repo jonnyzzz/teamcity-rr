@@ -104,14 +104,19 @@ object StartSafePushCommand : RViewCommandBase() {
             else -> throw UserErrorException("Failed to select safe-push type: [all, compile]")
         }
 
+        val safePushBranch = "$defaultSafePushBranchPrefix/master/j${commit.take(8)}/$mode"
         defaultGit.execGit(WithInheritSuccessfully, timeout = Duration.ofMinutes(5),
                 command = "push", args = listOf(
-                "origin", "-f",
-                "$commit:$defaultSafePushBranchPrefix/master/j${commit.take(8)}/$mode",
+                "origin",
+                "$commit:$safePushBranch",
+                "-f",
                 "$commit:refs/heads/${branch.removePrefix("refs/heads/")}",
         ))
 
-        ///TODO: log created branch name into the history (to use it to check status on TeamCity)
+        history.addSafePushBranch(SafePushBranchInfo(
+                branch = branch,
+                safePushBranch = safePushBranch,
+                commitId = commit
+        ))
     }
-
 }

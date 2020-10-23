@@ -4,12 +4,22 @@ import com.fasterxml.jackson.core.type.TypeReference
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import java.util.*
 
+data class SafePushBranchInfo(
+        val branch: String,
+        val safePushBranch: String,
+        val commitId: String,
+        val created: Date = Date()
+)
+
+private inline fun <reified Y> typeRef() = object : TypeReference<Y>() {}
+
 class TheHistory {
     private val om = jacksonObjectMapper()
     private val cacheLocation by lazy { DiskCaches.branchesCacheDir }
     private val rebaseFailedFile by lazy { cacheLocation / "rebase-failed-commits.txt" }
     private val snapshotFile by lazy { cacheLocation / "state.json" }
-    private fun branchForCommitsFile(branch: String) = cacheLocation / "branch-commits" + branch.replace(Regex("[^\\w\\d\\-]+"), "-") + ".txt"
+    private fun branchForCommitsFile(branch: String) = cacheLocation / "branch-commits-" + branch.replace(Regex("[^\\w\\d\\-]+"), "-") + ".txt"
+    private fun branchForSafePushesFile(branch: String) = cacheLocation / "branch-safe-push-" + branch.replace(Regex("[^\\w\\d\\-]+"), "-") + ".txt"
 
     private val brokenForRebase by lazy {
         runCatching { rebaseFailedFile.readText() }.getOrElse { "" }
@@ -17,6 +27,23 @@ class TheHistory {
                 .map { it.trim() }
                 .filter { it.isNotBlank() }
                 .toCollection(TreeSet())
+    }
+
+    fun addSafePushBranch(info: SafePushBranchInfo) {
+        val newBranches = (getSafePushBranches(info.branch) + info).distinct()
+        val path = branchForSafePushesFile(info.branch)
+        path.parentFile?.mkdirs()
+        om.writeValue(path, newBranches)
+        path.writeText(newBranches.joinToString("\n"))
+    }
+
+    fun getSafePushBranches(branch: String) : List<SafePushBranchInfo> {
+        val path = branchForSafePushesFile(branch)
+        return try {
+            om.readValue(path, typeRef())
+        } catch (t: Throwable) {
+            listOf()
+        }
     }
 
     fun saveSnapshot(snapshot: GitSnapshot) {
@@ -66,7 +93,7 @@ class TheHistory {
     fun lookupCommitsFor(branch: String): List<CommitInfo> {
         val branchFile = branchForCommitsFile(branch)
         return try {
-            om.readValue(branch, object : TypeReference<List<CommitInfo>>() {})
+            om.readValue(branch, typeRef())
         } catch (t: Throwable) {
             branchFile.delete()
             listOf()
