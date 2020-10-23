@@ -23,7 +23,8 @@ fun computeCurrentStatus(defaultGit: GitRunner,
         defaultGit.execGit(WithInheritSuccessfully, timeout = Duration.ofMinutes(10),
                 command = "fetch",
                 args = listOf(
-                        "--prune", "origin",
+                        "--prune", "--no-tags", "--keep",
+                        "origin",
                         "refs/heads/master:origin/master",
 //                            "$defaultSafePushBranchPrefix/*:$defaultLocalPushBranchPrefix/*"
                 ))
