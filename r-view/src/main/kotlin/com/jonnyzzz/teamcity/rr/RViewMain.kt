@@ -14,7 +14,7 @@ object RViewMain {
         try {
             theMain(args.toList())
         } catch (e: UserErrorException) {
-            LOG.error(e.message, e)
+            LOG.error(e.message)
             exitProcess(1)
         } catch (t: Throwable) {
             LOG.error("Unexpected failure: ${t.message}", t)
