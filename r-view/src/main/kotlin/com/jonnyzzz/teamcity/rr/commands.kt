@@ -78,6 +78,8 @@ object StartSafePushCommand : RViewCommandBase() {
                 "$commit:$defaultSafePushBranchPrefix/master/j${commit.take(8)}/$mode",
                 "$commit:refs/heads/${branch.removePrefix("refs/heads/")}",
         ))
+
+        ///TODO: log created branch name into the history (to use it to check status on TeamCity)
     }
 
 }
