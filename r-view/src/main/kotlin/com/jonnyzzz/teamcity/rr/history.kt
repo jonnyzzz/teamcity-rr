@@ -51,6 +51,10 @@ class TheHistory {
         om.writerWithDefaultPrettyPrinter().writeValue(snapshotFile, snapshot)
     }
 
+    fun invalidateSnapshot() {
+        snapshotFile.delete()
+    }
+
     fun loadSnapshot() : GitSnapshot? {
         return try {
             om.readValue(snapshotFile, GitSnapshot::class.java)
