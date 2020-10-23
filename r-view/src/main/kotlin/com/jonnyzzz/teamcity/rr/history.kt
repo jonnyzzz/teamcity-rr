@@ -57,6 +57,7 @@ class TheHistory {
     }
 
     fun loadSnapshot() : GitSnapshot? {
+        if (!snapshotFile.isFile) return null
         return try {
             om.readValue(snapshotFile, GitSnapshot::class.java)
         } catch (t: Throwable) {
@@ -97,8 +98,9 @@ class TheHistory {
 
     fun lookupCommitsFor(branch: String): List<CommitInfo> {
         val branchFile = branchForCommitsFile(branch)
+        if (!branchFile.isFile) return listOf()
         return try {
-            om.readValue(branch, typeRef())
+            om.readValue(branchFile, typeRef())
         } catch (t: Throwable) {
             branchFile.delete()
             listOf()

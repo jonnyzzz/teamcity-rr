@@ -14,7 +14,7 @@ fun collectChangesForPendingBranches(defaultGit: GitRunner,
 
     for ((branch, _) in snapshot.alreadyMergedBranches) {
         val uniqueCommits = history.lookupCommitsFor(branch)
-                .filter { it in snapshot.masterCommitInfos }
+                .mapNotNull { snapshot.masterCommitInfos[it] }
 
         if (uniqueCommits.isNotEmpty()) {
             branches[branch] = uniqueCommits

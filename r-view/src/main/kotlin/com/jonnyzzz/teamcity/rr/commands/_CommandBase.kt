@@ -31,7 +31,7 @@ abstract class CommandBase {
     protected inner class Session(private val args: List<String>) {
         val preferSnapshot = preferSnapshot(args)
         val runFetch = !preferSnapshot && runFetch(args)
-        val runRebase = !preferSnapshot && !runFetch && runRebase(args)
+        val runRebase = !preferSnapshot && runFetch && runRebase(args)
     }
 
     private fun Session.buildSnapshot(): GitSnapshot {

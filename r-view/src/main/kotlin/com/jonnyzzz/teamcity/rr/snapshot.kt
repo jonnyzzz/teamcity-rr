@@ -16,5 +16,5 @@ data class GitSnapshot(
         val created: Date = Date(),
 ) {
     @get:JsonIgnore
-    val masterCommitInfos: Set<CommitInfo> by lazy { masterCommits.values.toHashSet() }
+    val masterCommitInfos: Map<CommitInfo, CommitInfo> by lazy { masterCommits.values.toHashSet().associateBy { it } }
 }

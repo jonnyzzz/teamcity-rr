@@ -99,13 +99,13 @@ data class CommitInfo(
         val author: String,
         val subject: String
 ) {
-    override fun hashCode() = Objects.hash(commitId, authorDate, author)
+    override fun hashCode() = Objects.hash(authorDate, author)
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other !is CommitInfo) return false
 
-        if (commitId != other.commitId) return false
+        //commitId is not included here to make it rebase-safe
         if (authorDate != other.authorDate) return false
         if (author != other.author) return false
         return true
