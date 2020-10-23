@@ -62,7 +62,15 @@ abstract class RViewCommandBase {
     }
 }
 
+object UpdateCommand : RViewCommandBase() {
+    override fun Session.doTheCommandImpl(snapshot: GitSnapshot, args: List<String>) {
+        snapshot.showSnapshot()
+    }
+}
+
 object ShowCommand : RViewCommandBase() {
+    override fun preferSnapshot(args: List<String>) = true
+
     override fun Session.doTheCommandImpl(snapshot: GitSnapshot, args: List<String>) {
         snapshot.showSnapshot()
     }
