@@ -1,6 +1,7 @@
 package com.jonnyzzz.teamcity.rr
 
 import com.fasterxml.jackson.annotation.JsonIgnore
+import java.util.*
 
 data class GitSnapshot(
         val masterCommits: Map<String, CommitInfo>,
@@ -11,7 +12,9 @@ data class GitSnapshot(
         val pendingBranches: Map<String, String>,
 
         val branchToUniqueCommits: Map<String, List<CommitInfo>> = mapOf(),
+
+        val created: Date = Date(),
 ) {
-    @JsonIgnore
-    val masterCommitInfos : Set<CommitInfo> = masterCommits.values.toHashSet()
+    @get:JsonIgnore
+    val masterCommitInfos: Set<CommitInfo> by lazy { masterCommits.values.toHashSet() }
 }

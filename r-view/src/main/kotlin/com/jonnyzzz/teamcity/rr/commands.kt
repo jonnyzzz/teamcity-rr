@@ -1,6 +1,8 @@
 package com.jonnyzzz.teamcity.rr
 
 import java.time.Duration
+import java.time.Instant
+import java.time.temporal.ChronoUnit
 
 abstract class RViewCommandBase {
     protected val defaultGit by lazy {
@@ -12,25 +14,45 @@ abstract class RViewCommandBase {
     protected val history by lazy { TheHistory() }
 
     fun doTheCommand(args: List<String>) {
-        doTheCommandImpl(buildSnapshot(args), args)
+        Session(args).run {
+            val snapshot = buildSnapshot()
+            doTheCommandImpl(snapshot, args)
+        }
     }
 
-    protected open fun runRebase(args: List<String>) : Boolean = true
-    protected open fun runFetch(args: List<String>) : Boolean = "--no-fetch" !in args
+    protected open fun preferSnapshot(args: List<String>): Boolean = "--snapshot" in args
+    protected open fun runRebase(args: List<String>): Boolean = true
+    protected open fun runFetch(args: List<String>): Boolean = "--no-fetch" !in args
 
-    private fun buildSnapshot(args: List<String>): GitSnapshot {
-        var snapshot = computeCurrentStatus(
-                runFetch = runFetch(args),
-                defaultGit = defaultGit,
-                doRebase = runRebase(args),
-                history = history,
-        )
+    protected inner class Session(private val args: List<String>) {
+        val preferSnapshot = preferSnapshot(args)
+        val runFetch = !preferSnapshot && runFetch(args)
+        val runRebase = !preferSnapshot && !runFetch && runRebase(args)
+    }
+
+    private fun Session.buildSnapshot(): GitSnapshot {
+        if (preferSnapshot) {
+            val snapshot = history.loadSnapshot()
+            if (snapshot != null && snapshot.created.toInstant().until(Instant.now(), ChronoUnit.HOURS) < 2) {
+                println("Using persisted snapshot from ${snapshot.created}")
+                return snapshot
+            }
+        }
+
+        var snapshot =
+                computeCurrentStatus(
+                        runFetch = runFetch,
+                        defaultGit = defaultGit,
+                        doRebase = runRebase,
+                        history = history,
+                )
+
         snapshot = collectChangesForPendingBranches(defaultGit, history, snapshot)
         history.saveSnapshot(snapshot)
         return snapshot
     }
 
-    protected abstract fun doTheCommandImpl(snapshot: GitSnapshot, args: List<String>)
+    protected abstract fun Session.doTheCommandImpl(snapshot: GitSnapshot, args: List<String>)
 
     protected fun findBranchFromArgs(snapshot: GitSnapshot, args: List<String>): Pair<String, String> {
         val (branch, commit) = snapshot.pendingBranches.entries.singleOrNull { (branch) ->
@@ -41,7 +63,7 @@ abstract class RViewCommandBase {
 }
 
 object ShowCommand : RViewCommandBase() {
-    override fun doTheCommandImpl(snapshot: GitSnapshot, args: List<String>) {
+    override fun Session.doTheCommandImpl(snapshot: GitSnapshot, args: List<String>) {
         snapshot.showSnapshot()
     }
 }
@@ -50,7 +72,7 @@ object ToggleRebaseMode : RViewCommandBase() {
     override fun runRebase(args: List<String>): Boolean = false
     override fun runFetch(args: List<String>): Boolean = false
 
-    override fun doTheCommandImpl(snapshot: GitSnapshot, args: List<String>) {
+    override fun Session.doTheCommandImpl(snapshot: GitSnapshot, args: List<String>) {
         val (_, commit) = findBranchFromArgs(snapshot, args)
         when {
             "disable" in args -> history.logRebaseFailed(commit)
@@ -61,10 +83,11 @@ object ToggleRebaseMode : RViewCommandBase() {
 }
 
 object StartSafePushCommand : RViewCommandBase() {
+    override fun preferSnapshot(args: List<String>): Boolean = true
     override fun runRebase(args: List<String>): Boolean = false
     override fun runFetch(args: List<String>): Boolean = false
 
-    override fun doTheCommandImpl(snapshot: GitSnapshot, args: List<String>) {
+    override fun Session.doTheCommandImpl(snapshot: GitSnapshot, args: List<String>) {
         val (branch, commit) = findBranchFromArgs(snapshot, args)
 
         val mode = when {
