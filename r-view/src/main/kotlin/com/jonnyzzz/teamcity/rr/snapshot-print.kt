@@ -48,7 +48,7 @@ private fun GitSnapshot.formatBranchWithInfo(branch: String): String {
             val text = "${uniqueCommits.size} unique commits"
             append(" ".repeat((cellSize - text.length).coerceAtLeast(0)))
 
-            if (supportsLinks) {
+            if (supportsLinks && uniqueCommits.all { it.commitId in masterCommits }) {
                 append(formatLinkIfSupported(generateSpaceCommitsLink(uniqueCommits), text))
             } else {
                 append(text)

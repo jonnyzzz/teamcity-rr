@@ -34,6 +34,9 @@ private fun Session.showSelectedBranch(selectedBranch: String) {
                     commits.isEmpty() -> "no new commits"
                     else -> "" + commits.size + " unique changes"
                 } + "\n\n" +
-                generateSpaceCommitsLink(commits)
+
+                if (commits.all { it.commitId in snapshot.masterCommits }) {
+                    generateSpaceCommitsLink(commits)
+                } else ""
     }
 }
