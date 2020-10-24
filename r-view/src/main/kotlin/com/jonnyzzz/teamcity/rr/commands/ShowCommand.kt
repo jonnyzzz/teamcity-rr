@@ -28,6 +28,7 @@ private fun Session.showCommand() {
 
 private fun Session.showSelectedBranch(selectedBranch: String) {
     val commits = snapshot.branchToUniqueCommits[selectedBranch] ?: listOf()
+    val lastPush = snapshot.branchToSafePushes[selectedBranch]?.lastOrNull()
     printWithHighlighting {
         "Branch: " + bold(selectedBranch) + " " +
                 when {
@@ -35,8 +36,19 @@ private fun Session.showSelectedBranch(selectedBranch: String) {
                     else -> "" + commits.size + " unique changes"
                 } + "\n\n" +
 
-                if (commits.all { it.commitId in snapshot.masterCommits }) {
-                    generateSpaceCommitsLink(commits)
-                } else ""
+                run {
+                    if (commits.all { it.commitId in snapshot.masterCommits }) {
+                        generateSpaceCommitsLink(commits)
+                    } else ""
+                } +
+
+                run {
+                    if (lastPush != null) {
+                        "\n\nLast safe-pushed (${lastPush.mode}) on " +
+                                underline("${lastPush.created}") +
+                                "\n\n" +
+                                lastPush.formatTeamCityLink()
+                    } else ""
+                } + "\n\n"
     }
 }

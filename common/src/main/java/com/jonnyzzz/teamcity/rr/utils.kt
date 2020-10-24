@@ -19,3 +19,5 @@ operator fun Path.div(path: String): Path = resolve(path)
 
 val WorkDir: File by lazy { File(".").canonicalFile }
 
+
+fun String.urlEncode() : String = java.net.URLEncoder.encode(this, "utf-8")

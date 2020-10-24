@@ -10,7 +10,9 @@ data class SafePushBranchInfo(
         val commitId: String,
         val mode: SafePushMode,
         val created: Date = Date()
-)
+) {
+    fun formatTeamCityLink(): String = mode.teamcityBranchLinkFromBranch(safePushBranch)
+}
 
 private inline fun <reified Y> typeRef() = object : TypeReference<Y>() {}
 
@@ -34,12 +36,12 @@ class TheHistory {
         val newBranches = (getSafePushBranches(info.branch) + info).distinct()
         val path = branchForSafePushesFile(info.branch)
         path.parentFile?.mkdirs()
-        om.writeValue(path, newBranches)
-        path.writeText(newBranches.joinToString("\n"))
+        om.writerWithDefaultPrettyPrinter().writeValue(path, newBranches)
     }
 
     fun getSafePushBranches(branch: String) : List<SafePushBranchInfo> {
         val path = branchForSafePushesFile(branch)
+        if (!path.isFile) return listOf()
         return try {
             om.readValue(path, typeRef())
         } catch (t: Throwable) {

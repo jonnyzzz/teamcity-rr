@@ -59,7 +59,13 @@ private fun GitSnapshot.formatBranchWithInfo(branch: String): String {
 
         val safePushes = branchToSafePushes[branch]
         if (safePushes != null && safePushes.isNotEmpty()) {
-            append("  " + safePushes.size + " safe pushes")
+            append("  ")
+            append("${safePushes.size} safe pushes")
+            if (supportsLinks) {
+                val lastPush = safePushes.last()
+                append(": ")
+                append(formatLinkIfSupported(lastPush.formatTeamCityLink(), "last push on TeamCity"))
+            }
         }
     }
 }
