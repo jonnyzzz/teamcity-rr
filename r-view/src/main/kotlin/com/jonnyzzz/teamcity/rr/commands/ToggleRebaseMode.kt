@@ -8,15 +8,15 @@ object ToggleRebaseMode : CommandBase() {
     override fun runRebase(args: List<String>): Boolean = false
     override fun runFetch(args: List<String>): Boolean = false
 
-    override fun Session.doTheCommandImpl(snapshot: GitSnapshot, args: List<String>) {
+    override fun Session.doTheCommandImpl() {
         when {
             "disable" in args -> {
-                val (branch, commit) = findBranchFromArgs(snapshot.pendingBranches, args)
+                val (branch, commit) = getBranchFromArgs(snapshot.pendingBranches)
                 history.logRebaseFailed(commit)
                 printFinalMessage("Branch $branch is disabled for rebase")
             }
             "enable" in args -> {
-                val (branch, commit) = findBranchFromArgs(snapshot.rebaseFailedBranches, args)
+                val (branch, commit) = getBranchFromArgs(snapshot.rebaseFailedBranches)
                 history.removeRebaseFailed(commit)
                 printFinalMessage("Branch $branch is enabled for rebase")
             }

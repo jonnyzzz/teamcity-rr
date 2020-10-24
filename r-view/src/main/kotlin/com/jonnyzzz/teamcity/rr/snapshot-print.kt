@@ -42,9 +42,17 @@ private fun GitSnapshot.formatBranchWithInfo(branch: String): String {
         append("  ")
         append(branch.padEnd(39))
 
+        val cellSize = 20
         val uniqueCommits = branchToUniqueCommits[branch]
-        if (uniqueCommits != null) {
-            append("${uniqueCommits.size} unique commits".padStart(17))
+        if (uniqueCommits != null && uniqueCommits.isNotEmpty()) {
+            val text = "${uniqueCommits.size} unique commits"
+            append(" ".repeat((cellSize - text.length).coerceAtLeast(0)))
+
+            if (supportsLinks) {
+                append(formatLinkIfSupported(generateSpaceCommitsLink(uniqueCommits), text))
+            } else {
+                append(text)
+            }
         } else {
             append("".padStart(20))
         }

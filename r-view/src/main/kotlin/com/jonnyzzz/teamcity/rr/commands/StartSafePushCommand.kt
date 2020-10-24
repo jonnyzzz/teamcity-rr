@@ -8,8 +8,8 @@ object StartSafePushCommand : CommandBase() {
     override fun runRebase(args: List<String>): Boolean = false
     override fun runFetch(args: List<String>): Boolean = false
 
-    override fun Session.doTheCommandImpl(snapshot: GitSnapshot, args: List<String>) {
-        val (branch, commit) = findBranchFromArgs(snapshot.pendingBranches, args)
+    override fun Session.doTheCommandImpl() {
+        val (branch, commit) = getBranchFromArgs(snapshot.pendingBranches)
 
         val mode = when {
             "all" in args -> SafePushMode.ALL

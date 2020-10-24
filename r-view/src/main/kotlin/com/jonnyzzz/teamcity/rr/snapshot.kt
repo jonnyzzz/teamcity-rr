@@ -36,7 +36,10 @@ data class GitSnapshot(
     val headBranch by lightSnapshot::headBranch
 
     @get:JsonIgnore
-    val allBranchNames : Set<String> = listOf(alreadyMergedBranches.keys, rebaseFailedBranches.keys, pendingBranches.keys).flatMapTo(TreeSet()) {it}
+    val allBranches : Map<String, String> = (alreadyMergedBranches + rebaseFailedBranches + pendingBranches).toSortedMap()
+
+    @get:JsonIgnore
+    val allBranchNames : Set<String> = allBranches.keys.toSortedSet()
 
     @get:JsonIgnore
     val masterCommitInfos: Map<CommitInfo, CommitInfo> by lazy { masterCommits.values.toHashSet().associateBy { it } }
