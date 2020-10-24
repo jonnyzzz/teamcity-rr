@@ -3,20 +3,8 @@ package com.jonnyzzz.teamcity.rr.commands
 import com.jonnyzzz.teamcity.rr.*
 
 abstract class CommandBase {
-    protected val defaultGit by lazy {
-        val git = GitRunner(workdir = WorkDir)
-        git.checkGitVersion()
-        git
-    }
-
-    protected val history by lazy { TheHistory() }
-
     fun doTheCommand(args: List<String>) {
         Session(args).doTheCommandImpl()
-    }
-
-    protected fun invalidateSnapshot() {
-        history.invalidateSnapshot()
     }
 
     protected open fun preferSnapshot(args: List<String>): Boolean = "--snapshot" in args
@@ -27,6 +15,14 @@ abstract class CommandBase {
         val preferSnapshot = preferSnapshot(args)
         val runFetch = !preferSnapshot && runFetch(args)
         val runRebase = !preferSnapshot && runFetch && runRebase(args)
+
+        val defaultGit by lazy {
+            val git = GitRunner(workdir = WorkDir)
+            git.checkGitVersion()
+            git
+        }
+
+        val history by lazy { TheHistory() }
 
         val snapshot by lazy {
             val lightSnapshot = computeLightSnapshot(defaultGit)
@@ -72,4 +68,6 @@ abstract class CommandBase {
 
 abstract class SnapshotCommandBase : CommandBase() {
     override fun preferSnapshot(args: List<String>) = "--no-snapshot" !in args
+    override fun runRebase(args: List<String>): Boolean = false
+    override fun runFetch(args: List<String>): Boolean = false
 }

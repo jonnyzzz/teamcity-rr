@@ -106,4 +106,10 @@ class TheHistory {
             listOf()
         }
     }
+
+    fun branchRemoved(branch: String, commit: String) {
+        branchForCommitsFile(branch).delete()
+        removeRebaseFailed(commit)
+        branchForSafePushesFile(branch).delete()
+    }
 }

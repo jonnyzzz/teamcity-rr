@@ -1,6 +1,5 @@
 package com.jonnyzzz.teamcity.rr.commands
 
-import com.jonnyzzz.teamcity.rr.GitSnapshot
 import com.jonnyzzz.teamcity.rr.UserErrorException
 import com.jonnyzzz.teamcity.rr.printFinalMessage
 
@@ -23,6 +22,6 @@ object ToggleRebaseMode : CommandBase() {
             else -> throw UserErrorException("Failed to select rebase mode from args")
         }
 
-        invalidateSnapshot()
+        history.invalidateSnapshot()
     }
 }

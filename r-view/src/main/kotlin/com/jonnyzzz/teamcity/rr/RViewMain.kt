@@ -1,9 +1,6 @@
 package com.jonnyzzz.teamcity.rr
 
-import com.jonnyzzz.teamcity.rr.commands.ShowCommand
-import com.jonnyzzz.teamcity.rr.commands.StartSafePushCommand
-import com.jonnyzzz.teamcity.rr.commands.ToggleRebaseMode
-import com.jonnyzzz.teamcity.rr.commands.UpdateCommand
+import com.jonnyzzz.teamcity.rr.commands.*
 import org.slf4j.LoggerFactory
 import kotlin.system.exitProcess
 
@@ -34,10 +31,13 @@ private fun theMain(args: List<String>) {
 
     if (args.isEmpty()) {
         println("Please select command:")
-        println("  up[date]  [--no-fetch]             --- fetch, rebase, show the current state")
-        println("  show                               --- shows current status, if possible")
-        println("  push <branch> [all|compile]        --- starts a safe-push build")
-        println("  rebase <branch> [enable|disable]   --- enabled or disabled a branch from rebase")
+        println("  up[date] [branch] [--no-fetch]          --- fetch, rebase, show the current state")
+        println("  show [branch]                           --- shows current status, if possible")
+        println("  push <branch> all                       --- starts a safe-push build with all tests, push the branch")
+        println("  push <branch> compile                   --- starts a safe-push build with compile, push the branch")
+        println("  push <branch> [local]                   --- push the branch")
+        println("  auto-rebase <branch> [enable|disable]   --- enabled or disabled a branch from rebase")
+        println("  delete <branch>                         --- removes local and remote branch")
         println()
         exitProcess(11)
     }
@@ -45,8 +45,9 @@ private fun theMain(args: List<String>) {
     when (val cmd = args.getOrNull(0)?.toLowerCase()) {
         "up", "update" -> UpdateCommand.doTheCommand(args)
         "show" -> ShowCommand.doTheCommand(args)
-        "safepush", "push" -> StartSafePushCommand.doTheCommand(args)
-        "rebase" -> ToggleRebaseMode.doTheCommand(args)
+        "push" -> StartSafePushCommand.doTheCommand(args)
+        "auto-rebase" -> ToggleRebaseMode.doTheCommand(args)
+        "delete" -> DeleteBranchCommand.doTheCommand(args)
         else -> throw UserErrorException("Unknown command: $cmd")
     }
 }
