@@ -72,8 +72,6 @@ class GitWorktreeBase(
                     "feature.manyFiles",
                     "index.threads"
             )
-
-            println("Temp Git repo for merges it ready at $tempGit")
         }
     }
 

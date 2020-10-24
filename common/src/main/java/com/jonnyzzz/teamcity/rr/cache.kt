@@ -92,9 +92,7 @@ private object PersistentCache {
 
 object DiskCaches {
   private val baseCachePath by lazyDir {
-    val path = File(WorkDir, ".git/teamcity-rr-cache").canonicalFile
-    println("Using cache dir: $path")
-    path
+    File(WorkDir, ".git/teamcity-rr-cache").canonicalFile
   }
 
   val branchesCacheDir by lazyDir { baseCachePath / "branches" }
