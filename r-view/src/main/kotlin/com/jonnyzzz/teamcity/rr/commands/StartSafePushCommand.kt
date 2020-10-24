@@ -13,10 +13,20 @@ object StartSafePushCommand : SnapshotCommandBase() {
             else -> null
         }
 
+        run {
+            val gitHeadCommit = defaultGit.gitHeadCommit(branch)
+            if (commit != gitHeadCommit) {
+                history.invalidateSnapshot()
+                throw UserErrorException("Invalid state for branch $branch. " +
+                        "We assume it was at $commit but it is actually at $gitHeadCommit"
+                )
+            }
+        }
+
         val pushBranchName = branch.removePrefix("refs/heads/")
         defaultGit.execGit(WithInheritSuccessfully, timeout = Duration.ofMinutes(5),
                 command = "push", args = listOf(
-                "--force-with-lease=$pushBranchName:$commit",
+                "--force-with-lease",
                 "--set-upstream",
                 "origin",
                 pushBranchName,
@@ -28,7 +38,7 @@ object StartSafePushCommand : SnapshotCommandBase() {
         defaultGit.execGit(WithInheritSuccessfully, timeout = Duration.ofMinutes(5),
                 command = "push", args = listOf(
                 "origin",
-                "$commit:$safePushBranch",
+                "$pushBranchName:$safePushBranch",
         ))
 
         history.addSafePushBranch(SafePushBranchInfo(
