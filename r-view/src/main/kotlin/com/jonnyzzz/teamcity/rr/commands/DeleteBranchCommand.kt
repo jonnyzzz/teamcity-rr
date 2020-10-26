@@ -30,3 +30,21 @@ object DeleteBranchCommand : SnapshotCommandBase() {
         history.invalidateSnapshot()
     }
 }
+
+object ResetBranchCommand : SnapshotCommandBase() {
+    override fun Session.doTheCommandImpl() {
+        val (branch, commit) = getBranchFromArgs(snapshot.allBranches)
+
+        //we do not know if this branch exists, so give it a try to kill it
+        defaultGit.execGit(WithInherit, timeout = Duration.ofMinutes(1),
+                command = "push", args = listOf("origin", ":$branch"))
+
+        printWithHighlighting {
+            "The branch " + bold(branch) + " was reset \n\n" +
+                    "To restore it use the commit " + underline(commit)
+        }
+
+        history.branchRemoved(branch, commit)
+        history.invalidateSnapshot()
+    }
+}

@@ -10,7 +10,7 @@ data class LightSnapshot(
 )
 
 data class GitSnapshot(
-        private val lightSnapshot: LightSnapshot,
+        val lightSnapshot: LightSnapshot,
         val headToMasterCommits : List<CommitInfo>,
 
         val alreadyMergedBranches: Map<String, String>,
@@ -24,7 +24,7 @@ data class GitSnapshot(
         val masterCommits: Map<String, CommitInfo>,
 ) {
 
-    fun hasSameLight(snapshot: LightSnapshot) = this.lightSnapshot == lightSnapshot
+    fun hasSameLight(snapshot: LightSnapshot) = this.lightSnapshot == snapshot
 
     @get:JsonIgnore
     val masterCommit by lightSnapshot::masterCommit

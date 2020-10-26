@@ -24,12 +24,12 @@ object RViewMain {
     }
 }
 
-private fun theMain(args: List<String>) {
+private fun theMain(allArgs: List<String>) {
     println("TeamCity R-View v$rrVersion by @jonnyzzz")
     println()
     println("Running in $WorkDir...")
 
-    if (args.isEmpty()) {
+    if (allArgs.isEmpty()) {
         println("Please select command:")
         println("  up[date] [branch] [--no-fetch]          --- fetch, rebase, show the current state")
         println("  show [branch]                           --- shows current status, if possible")
@@ -38,16 +38,23 @@ private fun theMain(args: List<String>) {
         println("  push <branch> [local]                   --- push the branch")
         println("  auto-rebase <branch> [enable|disable]   --- enabled or disabled a branch from rebase")
         println("  delete <branch>                         --- removes local and remote branch")
+        println("  reset <branch>                          --- removes all collected of the given branch")
+        println("  new <branch>                            --- creates new branch with the given name, stashes current work, switches")
         println()
         exitProcess(11)
     }
 
-    when (val cmd = args.getOrNull(0)?.toLowerCase()) {
+    val cmd = allArgs.first().toLowerCase()
+    val args = allArgs.drop(1)
+
+    when (cmd) {
         "up", "update" -> UpdateCommand.doTheCommand(args)
         "show" -> ShowCommand.doTheCommand(args)
         "push" -> StartSafePushCommand.doTheCommand(args)
         "auto-rebase" -> ToggleRebaseMode.doTheCommand(args)
         "delete" -> DeleteBranchCommand.doTheCommand(args)
+        "reset" -> ResetBranchCommand.doTheCommand(args)
+        "new" -> NewBranchCommand.doTheCommand(args)
         else -> throw UserErrorException("Unknown command: $cmd")
     }
 }

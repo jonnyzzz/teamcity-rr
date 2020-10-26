@@ -4,7 +4,8 @@ import java.time.Duration
 import java.util.*
 
 
-private const val defaultBranchPrefix = "refs/heads/jonnyzzz/"  //TODO: configuration?
+const val branchPrefix = "jonnyzzz"
+private const val defaultBranchPrefix = "refs/heads/$branchPrefix/"  //TODO: configuration?
 
 fun computeLightSnapshot(defaultGit: GitRunner): LightSnapshot {
     return LightSnapshot(
@@ -62,6 +63,8 @@ fun computeCurrentStatus(
             continue
         }
 
+        println("Rebasing $branch...")
+        //TODO: make a smart rebase - if branch is an ancestor of toHead
         val rebaseResult = defaultGit.gitRebase(branch = branch, toHead = lightSnapshot.masterCommit)
         if (rebaseResult == null) {
             history.logRebaseFailed(commit)

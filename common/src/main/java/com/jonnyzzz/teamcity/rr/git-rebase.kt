@@ -17,7 +17,7 @@ fun GitRunner.gitRebase(branch: String, toHead: String): GitRebaseResult? {
 
     if (listGitCurrentBranchName("HEAD") == listGitCurrentBranchName(branch)) {
         doUnderStash {
-            return runRebaseAndHandleConflicts(branch, targetCommit)
+            return runRebaseAndHandleConflicts(targetCommit)
         }
     }
 
@@ -27,7 +27,7 @@ fun GitRunner.gitRebase(branch: String, toHead: String): GitRebaseResult? {
         execGit(WithNoOutputSuccessfully, timeout = Duration.ofMinutes(15),
                 command = "checkout", args = listOf("-b", tempBranchName, branchCommit))
 
-        val rebaseResult = runRebaseAndHandleConflicts(branch, targetCommit) ?: return null
+        val rebaseResult = runRebaseAndHandleConflicts(targetCommit) ?: return null
 
         val rebasedCommit = rebaseResult.newCommitId
         execGit(WithNoOutputSuccessfully,
@@ -39,7 +39,7 @@ fun GitRunner.gitRebase(branch: String, toHead: String): GitRebaseResult? {
     }
 }
 
-private fun GitRunner.runRebaseAndHandleConflicts(branch: String, targetCommit: String): GitRebaseResult? {
+private fun GitRunner.runRebaseAndHandleConflicts(targetCommit: String): GitRebaseResult? {
     val code = execGit(WithOutput, timeout = Duration.ofMinutes(15),
             command = "rebase", args = listOf(targetCommit))
 
@@ -51,14 +51,23 @@ private fun GitRunner.runRebaseAndHandleConflicts(branch: String, targetCommit: 
     return null
 }
 
+fun GitRunner.getStashObjectId(): String {
+    return execGit(WithOutput, timeout = Duration.ofMinutes(15),
+            command = "rev-parse", args = listOf("-q", "--verify", "refs/stash"))
+            .successfully().stdout.trim()
+}
+
 inline fun <Y> GitRunner.doUnderStash(action: GitRunner.() -> Y): Y {
-    val stash = execGit(WithOutput, timeout = Duration.ofMinutes(15),
+    //https://stackoverflow.com/a/34116244/49811
+    val oldStash = getStashObjectId()
+    execGit(WithInheritSuccessfully, timeout = Duration.ofMinutes(15),
             command = "stash", args = listOf("push"))
+    val newStash = getStashObjectId()
 
     try {
         return action()
     } finally {
-        if (stash.exitCode == 0) {
+        if (oldStash != newStash) {
             execGit(WithNoOutputSuccessfully, timeout = Duration.ofMinutes(15),
                     command = "stash", args = listOf("pop"))
         }

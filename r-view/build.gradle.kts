@@ -15,7 +15,7 @@ val entryClassName = "com.jonnyzzz.teamcity.rr.RViewMain"
 val runShowCommand by tasks.creating(JavaExec::class.java) {
     classpath = sourceSets.getByName("main").runtimeClasspath
     main = entryClassName
-    args = listOf("up", "--no-fetch")
+    args = listOf("show")
     enableAssertions = true
     workingDir = File("/Users/jonnyzzz/Work/intellij")
 }
