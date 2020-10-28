@@ -54,8 +54,15 @@ fun computeCurrentStatus(
             .mapKeys { it.key.removePrefix("refs/heads/") }
             .toSortedMap()
 
+    val recentMasterCommits by lazy {
+        defaultGit
+                .listGitCommitsEx(masterCommit, commits = 2048)
+                .associateBy { it.commitId }
+    }
+
     if (doRebase) {
         var didRebase = false
+
         for ((branch, commit) in branches) {
             if (history.isBrokenForRebase(commit)) continue
 
@@ -63,7 +70,12 @@ fun computeCurrentStatus(
             printWithHighlighting { "Rebasing " + bold(branch) + "..." }
 
             //TODO: make a smart rebase - if branch is an ancestor of toHead
-            val rebaseResult = defaultGit.gitRebase(branch = branch, toHead = masterCommit)
+            val rebaseResult = defaultGit.gitRebase(
+                    branch = branch,
+                    toHead = masterCommit,
+                    isIncludedInHead = { it in recentMasterCommits }
+            )
+
             if (rebaseResult == null) {
                 history.logRebaseFailed(commit)
             }
@@ -81,16 +93,14 @@ fun computeCurrentStatus(
         )
     }
 
-    return computeCurrentStatusStatic(defaultGit, history, masterCommit, branches)
+    return computeCurrentStatusStatic(defaultGit, history, masterCommit, branches, recentMasterCommits)
 }
 
 private fun computeCurrentStatusStatic(defaultGit: GitRunner,
                                        history: TheHistory,
                                        masterCommit: String,
-                                       branches: Map<String, String>): GitSnapshot {
-    val recentCommits = defaultGit
-            .listGitCommitsEx(masterCommit, commits = 2048)
-            .associateBy { it.commitId }
+                                       branches: Map<String, String>,
+                                       recentMasterCommits: Map<String, CommitInfo>): GitSnapshot {
 
     val alreadyMergedBranches = TreeMap<String, String>()
     val rebaseFailedBranches = TreeMap<String, String>()
@@ -126,7 +136,7 @@ private fun computeCurrentStatusStatic(defaultGit: GitRunner,
     return GitSnapshot(
             lightSnapshot = lightSnapshot,
             headToMasterCommits = headToMasterCommits,
-            masterCommits = recentCommits,
+            masterCommits = recentMasterCommits,
             alreadyMergedBranches = alreadyMergedBranches,
             rebaseFailedBranches = rebaseFailedBranches,
             pendingBranches = pendingBranches

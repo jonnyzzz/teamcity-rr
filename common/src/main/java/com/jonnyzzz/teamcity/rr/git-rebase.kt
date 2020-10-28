@@ -6,8 +6,7 @@ data class GitRebaseResult(
         val newCommitId: String
 )
 
-//returns the new commit of the branch
-fun GitRunner.gitRebase(branch: String, toHead: String): GitRebaseResult? {
+fun GitRunner.gitRebase(branch: String, toHead: String, isIncludedInHead: (String) -> Boolean = {false}): GitRebaseResult? {
     val branchCommit = gitHeadCommit(branch)
     val targetCommit = gitHeadCommit(toHead)
 
@@ -19,6 +18,15 @@ fun GitRunner.gitRebase(branch: String, toHead: String): GitRebaseResult? {
         doUnderStash {
             return runRebaseAndHandleConflicts(targetCommit)
         }
+    }
+
+    // if the branch is on a commit reachable from toHead,
+    // means it is possible to just move the reference, as
+    // there is no new changes done by us
+    if (isIncludedInHead(branchCommit)) {
+        execGit(WithInheritSuccessfully, timeout = Duration.ofMinutes(1),
+        command = "update-ref", args = listOf(branch, targetCommit))
+        return GitRebaseResult(targetCommit)
     }
 
     GitWorktreeBase(this).use {
