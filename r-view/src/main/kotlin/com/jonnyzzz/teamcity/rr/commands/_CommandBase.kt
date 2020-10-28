@@ -37,7 +37,6 @@ abstract class CommandBase {
 
             var snapshot =
                     computeCurrentStatus(
-                            lightSnapshot = lightSnapshot,
                             runFetch = runFetch,
                             defaultGit = defaultGit,
                             doRebase = runRebase,
