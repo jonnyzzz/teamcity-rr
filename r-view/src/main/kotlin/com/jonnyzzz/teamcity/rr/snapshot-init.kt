@@ -16,7 +16,6 @@ fun computeLightSnapshot(defaultGit: GitRunner): LightSnapshot {
 }
 
 fun computeCurrentStatus(
-        lightSnapshot: LightSnapshot,
         defaultGit: GitRunner,
         history: TheHistory,
         runFetch: Boolean,
@@ -33,11 +32,13 @@ fun computeCurrentStatus(
                         "--prune", "--no-tags", "--keep",
                         "origin",
                         "refs/heads/master:refs/remotes/origin/master",
-//                            "$defaultSafePushBranchPrefix/*:$defaultLocalPushBranchPrefix/*"
                 ))
     }
 
-    val recentCommits = defaultGit.listGitCommitsEx("origin/master", commits = 2048)
+    val masterCommit = defaultGit.gitHeadCommit("origin/master")
+
+    val recentCommits = defaultGit
+            .listGitCommitsEx("origin/master", commits = 2048)
             .associateBy { it.commitId }
 
     val alreadyMergedBranches = TreeMap<String, String>()
@@ -65,7 +66,7 @@ fun computeCurrentStatus(
 
         println("Rebasing $branch...")
         //TODO: make a smart rebase - if branch is an ancestor of toHead
-        val rebaseResult = defaultGit.gitRebase(branch = branch, toHead = lightSnapshot.masterCommit)
+        val rebaseResult = defaultGit.gitRebase(branch = branch, toHead = masterCommit)
         if (rebaseResult == null) {
             history.logRebaseFailed(commit)
             rebaseFailedBranches += branch to commit
@@ -83,6 +84,11 @@ fun computeCurrentStatus(
 
     printProgress("Collected ${alreadyMergedBranches.size + rebaseFailedBranches.size + pendingBranches.size} local Git branches with $defaultBranchPrefix")
     println()
+
+    val lightSnapshot = computeLightSnapshot(defaultGit)
+    require(masterCommit == lightSnapshot.masterCommit) {
+        "Unexpected change of origin/master: $masterCommit != $lightSnapshot"
+    }
 
     val headToMasterCommits = when {
         lightSnapshot.headCommit == lightSnapshot.masterCommit -> listOf()
