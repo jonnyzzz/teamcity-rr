@@ -20,12 +20,14 @@ fun GitRunner.gitRebase(branch: String, toHead: String, isIncludedInHead: (Strin
         }
     }
 
+    val fullBranchName = "refs/heads/" + branch.removePrefix("refs/heads")
+
     // if the branch is on a commit reachable from toHead,
     // means it is possible to just move the reference, as
     // there is no new changes done by us
     if (isIncludedInHead(branchCommit)) {
         execGit(WithInheritSuccessfully, timeout = Duration.ofMinutes(1),
-        command = "update-ref", args = listOf(branch, targetCommit))
+        command = "update-ref", args = listOf(fullBranchName, targetCommit))
         return GitRebaseResult(targetCommit)
     }
 
@@ -41,7 +43,7 @@ fun GitRunner.gitRebase(branch: String, toHead: String, isIncludedInHead: (Strin
         execGit(WithNoOutputSuccessfully,
                 timeout = Duration.ofSeconds(5),
                 command = "push",
-                args = listOf(this@gitRebase.gitDir.toString(), "--force-with-lease=$branch:$branchCommit", "$rebasedCommit:$branch"))
+                args = listOf(this@gitRebase.gitDir.toString(), "--force-with-lease=$fullBranchName:$branchCommit", "$rebasedCommit:$fullBranchName"))
 
         return rebaseResult
     }
