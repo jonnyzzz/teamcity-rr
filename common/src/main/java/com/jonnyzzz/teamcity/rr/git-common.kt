@@ -46,17 +46,14 @@ fun GitRunner.getConfig(key: String): String? {
     return null
 }
 
-fun GitRunner.listGitBranches(): Map<String, String> {
+fun GitRunner.listGitBranches(): Set<String> {
     return execGit(WithOutput,
             command = "branch",
-            args = listOf("--format=%(objectname) %(refname)"),
+            //%(objectname) returns incorrect commitId here
+            args = listOf("--format=%(refname)"),
             timeout = Duration.ofMinutes(10)
     ).successfully().stdout.split("\n").map { it.trim() }.filter { it.isNotBlank() }
-            .map {
-                val (hash, branch) = it.split(" ", limit = 2)
-                branch to hash
-            }
-            .toMap().toSortedMap()
+            .toSortedSet()
 }
 
 fun GitRunner.listGitLsRemote(): Map<String, String> {

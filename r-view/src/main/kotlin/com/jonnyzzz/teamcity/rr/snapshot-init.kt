@@ -24,7 +24,24 @@ fun computeCurrentStatus(
     printProgress("Checking current status...")
     println()
 
-    val masterCommit = defaultGit.gitHeadCommit("origin/master")
+    val masterCommit by lazy { defaultGit.gitHeadCommit("origin/master") }
+
+    val branches by lazy {
+        defaultGit.listGitBranches()
+                .filter { it.startsWith(defaultBranchPrefix) }
+                //TODO: use defaultBranchPrefix as the prefix here (it may break other logic)
+                .map { it.removePrefix("refs/heads/") }
+                .toSortedSet()
+                .associateWith { defaultGit.gitHeadCommit(it) }
+                .toSortedMap()
+    }
+
+    val recentMasterCommits by lazy {
+        defaultGit
+                .listGitCommitsEx(masterCommit, commits = 2048)
+                .associateBy { it.commitId }
+    }
+
 
     if (runFetch) {
         printProgress("Fetching changes from remote...")
@@ -36,28 +53,12 @@ fun computeCurrentStatus(
                         "refs/heads/master:refs/remotes/origin/master",
                 ))
 
-        if (masterCommit != defaultGit.gitHeadCommit("origin/master")) {
-            history.invalidateSnapshot()
-        }
-
         return computeCurrentStatus(
                 defaultGit = defaultGit,
                 history = history,
                 runFetch = false,
                 doRebase = doRebase
         )
-    }
-
-    val branches = defaultGit.listGitBranches()
-            .filterKeys { it.startsWith(defaultBranchPrefix) }
-            //TODO: use defaultBranchPrefix as the prefix here (it may break other logic)
-            .mapKeys { it.key.removePrefix("refs/heads/") }
-            .toSortedMap()
-
-    val recentMasterCommits by lazy {
-        defaultGit
-                .listGitCommitsEx(masterCommit, commits = 2048)
-                .associateBy { it.commitId }
     }
 
     if (doRebase) {
@@ -69,7 +70,6 @@ fun computeCurrentStatus(
             didRebase = true
             printWithHighlighting { "Rebasing " + bold(branch) + "..." }
 
-            //TODO: make a smart rebase - if branch is an ancestor of toHead
             val rebaseResult = defaultGit.gitRebase(
                     branch = branch,
                     toHead = masterCommit,
