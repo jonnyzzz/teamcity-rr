@@ -7,7 +7,7 @@ fun collectChangesForPendingBranches(defaultGit: GitRunner,
                                      snapshot: GitSnapshot): GitSnapshot {
     val branches = TreeMap<String, List<CommitInfo>>()
     for ((branch, _) in snapshot.pendingBranches) {
-        val uniqueCommits = defaultGit.listGitCommitsEx(branch, notIn = "origin/master")
+        val uniqueCommits = defaultGit.listGitCommitsEx(branch, notIn = snapshot.masterCommit)
         history.updateCommitsFor(branch, uniqueCommits)
         branches[branch] = uniqueCommits
     }

@@ -24,6 +24,8 @@ fun computeCurrentStatus(
     printProgress("Checking current status...")
     println()
 
+    val masterCommit = defaultGit.gitHeadCommit("origin/master")
+
     if (runFetch) {
         printProgress("Fetching changes from remote...")
         defaultGit.execGit(WithInheritSuccessfully, timeout = Duration.ofMinutes(10),
@@ -33,23 +35,69 @@ fun computeCurrentStatus(
                         "origin",
                         "refs/heads/master:refs/remotes/origin/master",
                 ))
+
+        if (masterCommit != defaultGit.gitHeadCommit("origin/master")) {
+            history.invalidateSnapshot()
+        }
+
+        return computeCurrentStatus(
+                defaultGit = defaultGit,
+                history = history,
+                runFetch = false,
+                doRebase = doRebase
+        )
     }
 
-    val masterCommit = defaultGit.gitHeadCommit("origin/master")
+    val branches = defaultGit.listGitBranches()
+            .filterKeys { it.startsWith(defaultBranchPrefix) }
+            //TODO: use defaultBranchPrefix as the prefix here (it may break other logic)
+            .mapKeys { it.key.removePrefix("refs/heads/") }
+            .toSortedMap()
 
+    if (doRebase) {
+        var didRebase = false
+        for ((branch, commit) in branches) {
+            if (history.isBrokenForRebase(commit)) continue
+
+            didRebase = true
+            printWithHighlighting { "Rebasing " + bold(branch) + "..." }
+
+            //TODO: make a smart rebase - if branch is an ancestor of toHead
+            val rebaseResult = defaultGit.gitRebase(branch = branch, toHead = masterCommit)
+            if (rebaseResult == null) {
+                history.logRebaseFailed(commit)
+            }
+        }
+
+        if (didRebase) {
+            history.invalidateSnapshot()
+        }
+
+        return computeCurrentStatus(
+                defaultGit = defaultGit,
+                history = history,
+                runFetch = runFetch,
+                doRebase = false
+        )
+    }
+
+    return computeCurrentStatusStatic(defaultGit, history, masterCommit, branches)
+}
+
+private fun computeCurrentStatusStatic(defaultGit: GitRunner,
+                                       history: TheHistory,
+                                       masterCommit: String,
+                                       branches: Map<String, String>): GitSnapshot {
     val recentCommits = defaultGit
-            .listGitCommitsEx("origin/master", commits = 2048)
+            .listGitCommitsEx(masterCommit, commits = 2048)
             .associateBy { it.commitId }
 
     val alreadyMergedBranches = TreeMap<String, String>()
     val rebaseFailedBranches = TreeMap<String, String>()
     val pendingBranches = TreeMap<String, String>()
 
-    for ((fullBranchName, commit) in defaultGit.listGitBranches().toSortedMap()) {
-        if (!fullBranchName.startsWith(defaultBranchPrefix)) continue
-        val branch = fullBranchName.removePrefix("refs/heads/")
-
-        if (commit in recentCommits) {
+    for ((branch, commit) in branches) {
+        if (commit == masterCommit) {
             alreadyMergedBranches += branch to commit
             continue
         }
@@ -59,27 +107,7 @@ fun computeCurrentStatus(
             continue
         }
 
-        if (!doRebase) {
-            pendingBranches += branch to commit
-            continue
-        }
-
-        println("Rebasing $branch...")
-        //TODO: make a smart rebase - if branch is an ancestor of toHead
-        val rebaseResult = defaultGit.gitRebase(branch = branch, toHead = masterCommit)
-        if (rebaseResult == null) {
-            history.logRebaseFailed(commit)
-            rebaseFailedBranches += branch to commit
-            continue
-        }
-
-        val newCommitId = rebaseResult.newCommitId
-        if (newCommitId in recentCommits) {
-            alreadyMergedBranches += branch to newCommitId
-            continue
-        }
-
-        pendingBranches += branch to newCommitId
+        pendingBranches += branch to commit
     }
 
     printProgress("Collected ${alreadyMergedBranches.size + rebaseFailedBranches.size + pendingBranches.size} local Git branches with $defaultBranchPrefix")
@@ -92,7 +120,7 @@ fun computeCurrentStatus(
 
     val headToMasterCommits = when {
         lightSnapshot.headCommit == lightSnapshot.masterCommit -> listOf()
-        else -> defaultGit.listGitCommitsEx(lightSnapshot.headBranch, notIn = "origin/master")
+        else -> defaultGit.listGitCommitsEx(lightSnapshot.headBranch, notIn = masterCommit)
     }
 
     return GitSnapshot(
