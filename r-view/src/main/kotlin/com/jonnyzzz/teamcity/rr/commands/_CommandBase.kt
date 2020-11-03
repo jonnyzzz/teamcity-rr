@@ -55,8 +55,9 @@ abstract class CommandBase {
         }
 
         fun findBranchFromArgs(branches: Map<String, String>): Pair<String, String>? {
+            val preciseNames = args.filter { it.startsWith("=") || it.endsWith("=") }.map { it.trim('=') }
             val (branch, commit) = branches.entries.singleOrNull { (branch) ->
-                args.any { branch.contains(it, ignoreCase = true) }
+                args.any { branch.contains(it, ignoreCase = true) } || branch in preciseNames
             } ?: return null
             return branch to commit
         }
