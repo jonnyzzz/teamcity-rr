@@ -2,6 +2,7 @@ package com.jonnyzzz.teamcity.rr
 
 import java.io.File
 import java.time.Duration
+import kotlin.system.measureTimeMillis
 
 class GitRunner(
         val workdir: File,
@@ -19,13 +20,25 @@ class GitRunner(
                     timeout: Duration,
                     command: String,
                     bare: Boolean = false,
-                    args: List<String> = listOf()): T = execProcess(mode,
-            workDir = workdir,
-            timeout = timeout,
-            args = listOf(GIT_COMMAND) +
-                    (if (bare) listOf() else listOf("--git-dir=$gitDir")) +
-                    command + args
-    )
+                    args: List<String> = listOf()): T {
+        val result: T
+
+        val time = measureTimeMillis {
+            result = execProcess(mode,
+                    workDir = workdir,
+                    timeout = timeout,
+                    args = listOf(GIT_COMMAND) +
+                            (if (bare) listOf() else listOf("--git-dir=$gitDir")) +
+                            command + args
+            )
+        }
+
+        if (command == "push") {
+            println("Git push took: ${Duration.ofMillis(time).seconds} seconds")
+        }
+
+        return result
+    }
 
     fun throwFailedToExecuteGit(): Nothing =
             throw UserErrorException("Failed to execute `$GIT_COMMAND version` command. " +
