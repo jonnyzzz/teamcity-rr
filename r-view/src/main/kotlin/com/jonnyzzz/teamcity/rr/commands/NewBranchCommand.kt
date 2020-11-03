@@ -1,9 +1,6 @@
 package com.jonnyzzz.teamcity.rr.commands
 
-import com.jonnyzzz.teamcity.rr.UserErrorException
-import com.jonnyzzz.teamcity.rr.WithInheritSuccessfully
-import com.jonnyzzz.teamcity.rr.branchPrefix
-import com.jonnyzzz.teamcity.rr.printWithHighlighting
+import com.jonnyzzz.teamcity.rr.*
 import java.time.Duration
 
 object NewBranchCommand : SnapshotCommandBase() {
@@ -11,9 +8,12 @@ object NewBranchCommand : SnapshotCommandBase() {
         val branchName = args.singleOrNull { !it.startsWith("-") }
                 ?: throw UserErrorException("Branch is not specified in arguments")
 
-        val fullBranchName = "$branchPrefix/$branchName"
+        val fullBranchName = "refs/heads/" + branchName.removePrefix("refs/heads/")
+        if (!branchName.startsWith(defaultBranchPrefix)) {
+            throw UserErrorException("Branch $branchName must start with $defaultBranchPrefix")
+        }
 
-        defaultGit.execGit(WithInheritSuccessfully, Duration.ofMinutes(5), command = "stash")
+        defaultGit.execGit(WithInheritSuccessfully, Duration.ofMinutes(15), command = "stash")
         defaultGit.execGit(WithInheritSuccessfully, Duration.ofMinutes(5),
                 command = "checkout", args = listOf("-b", fullBranchName, snapshot.masterCommit))
 
