@@ -26,27 +26,34 @@ fun GitRunner.gitRebase(branch: String, toHead: String, isIncludedInHead: (Strin
     // means it is possible to just move the reference, as
     // there is no new changes done by us
     if (isIncludedInHead(branchCommit)) {
-        execGit(WithInheritSuccessfully, timeout = Duration.ofMinutes(1),
-        command = "update-ref", args = listOf(fullBranchName, targetCommit))
+        updateRef(fullBranchName, targetCommit)
         return GitRebaseResult(targetCommit)
     }
 
-    GitWorktreeBase(this).use {
+    val rebaseResult = GitWorktreeBase(this).use {
         val tempBranchName = "auto-rebase-${branchCommit.take(8)}-to-${targetCommit.take(8)}-${System.currentTimeMillis()}"
 
-        execGit(WithNoOutputSuccessfully, timeout = Duration.ofMinutes(15),
+        execGit(WithInheritSuccessfully, timeout = Duration.ofMinutes(15),
                 command = "checkout", args = listOf("-b", tempBranchName, branchCommit))
 
         val rebaseResult = runRebaseAndHandleConflicts(targetCommit) ?: return null
 
         val rebasedCommit = rebaseResult.newCommitId
-        execGit(WithNoOutputSuccessfully,
+        this@gitRebase.execGit(WithInheritSuccessfully,
                 timeout = Duration.ofSeconds(5),
-                command = "push",
-                args = listOf(this@gitRebase.gitDir.toString(), "--force-with-lease=$fullBranchName:$branchCommit", "$rebasedCommit:$fullBranchName"))
+                command = "fetch",
+                args = listOf(this@use.gitDir.toString(), rebasedCommit))
 
-        return rebaseResult
+        rebaseResult
     }
+
+    updateRef(fullBranchName, rebaseResult.newCommitId)
+    return rebaseResult
+}
+
+fun GitRunner.updateRef(fullBranchName: String, targetCommit: String) {
+    execGit(WithInheritSuccessfully, timeout = Duration.ofMinutes(1),
+            command = "update-ref", args = listOf(fullBranchName, targetCommit, "-m", "r-view rebase"))
 }
 
 private fun GitRunner.runRebaseAndHandleConflicts(targetCommit: String): GitRebaseResult? {
@@ -57,7 +64,7 @@ private fun GitRunner.runRebaseAndHandleConflicts(targetCommit: String): GitReba
         return gitHeadCommit("HEAD").let(::GitRebaseResult)
     }
 
-    execGit(WithNoOutputSuccessfully, timeout = Duration.ofMinutes(5), command = "rebase", args = listOf("--abort"))
+    execGit(WithInheritSuccessfully, timeout = Duration.ofMinutes(15), command = "rebase", args = listOf("--abort"))
     return null
 }
 
@@ -78,7 +85,7 @@ inline fun <Y> GitRunner.doUnderStash(action: GitRunner.() -> Y): Y {
         return action()
     } finally {
         if (oldStash != newStash) {
-            execGit(WithNoOutputSuccessfully, timeout = Duration.ofMinutes(15),
+            execGit(WithInheritSuccessfully, timeout = Duration.ofMinutes(15),
                     command = "stash", args = listOf("pop"))
         }
     }

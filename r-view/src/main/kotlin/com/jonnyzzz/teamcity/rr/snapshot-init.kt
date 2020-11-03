@@ -4,8 +4,7 @@ import java.time.Duration
 import java.util.*
 
 
-const val branchPrefix = "jonnyzzz"
-private const val defaultBranchPrefix = "refs/heads/$branchPrefix/"  //TODO: configuration?
+const val defaultBranchPrefix = "refs/heads/jonnyzzz/"  //TODO: configuration?
 
 fun computeLightSnapshot(defaultGit: GitRunner): LightSnapshot {
     return LightSnapshot(
