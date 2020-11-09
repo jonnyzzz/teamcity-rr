@@ -9,7 +9,7 @@ object NewBranchCommand : SnapshotCommandBase() {
                 ?: throw UserErrorException("Branch is not specified in arguments")
 
         val fullBranchName = "refs/heads/" + branchName.removePrefix("refs/heads/")
-        if (!branchName.startsWith(defaultBranchPrefix)) {
+        if (!fullBranchName.startsWith(defaultBranchPrefix)) {
             throw UserErrorException("Branch $branchName must start with $defaultBranchPrefix")
         }
 

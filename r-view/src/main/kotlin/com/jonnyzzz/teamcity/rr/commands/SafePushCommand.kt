@@ -3,23 +3,18 @@ package com.jonnyzzz.teamcity.rr.commands
 import com.jonnyzzz.teamcity.rr.*
 import java.time.Duration
 
-object StartSafePushCommand : SnapshotCommandBase() {
+object SafePushCommand : CommandBase() {
     override fun Session.doTheCommandImpl() {
         val (branch, commit) = getBranchFromArgs(snapshot.pendingBranches)
 
-        val mode = when {
-            "all" in args -> SafePushMode.ALL
-            "compile" in args -> SafePushMode.COMPILE
-            else -> null
-        }
-
-        run {
-            val gitHeadCommit = defaultGit.gitHeadCommit(branch)
-            if (commit != gitHeadCommit) {
-                history.invalidateSnapshot()
-                throw UserErrorException("Invalid state for branch $branch. " +
-                        "We assume it was at $commit but it is actually at $gitHeadCommit"
-                )
+        val mode = run {
+            val lowerCaseArgs = args.map { it.toLowerCase() }
+            when {
+                "all" in lowerCaseArgs -> SafePushMode.ALL
+                "test" in lowerCaseArgs -> SafePushMode.ALL
+                "tests" in lowerCaseArgs -> SafePushMode.ALL
+                "compile" in lowerCaseArgs -> SafePushMode.COMPILE
+                else -> null
             }
         }
 
