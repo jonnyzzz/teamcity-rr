@@ -35,6 +35,11 @@ object ResetBranchCommand : SnapshotCommandBase() {
     override fun Session.doTheCommandImpl() {
         val (branch, commit) = getBranchFromArgs(snapshot.allBranches)
 
+        defaultGit.execGit(WithInheritSuccessfully, timeout = Duration.ofMinutes(15), command = "stash")
+
+        defaultGit.execGit(WithInheritSuccessfully, timeout = Duration.ofMinutes(15),
+                command = "reset", args = listOf("--hard", snapshot.masterCommit))
+
         //we do not know if this branch exists, so give it a try to kill it
         defaultGit.execGit(WithInherit, timeout = Duration.ofMinutes(1),
                 command = "push", args = listOf("origin", ":$branch"))
