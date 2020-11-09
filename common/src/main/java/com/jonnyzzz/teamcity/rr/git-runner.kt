@@ -83,7 +83,9 @@ class GitWorktreeBase(
                     "merge.renameLimit",
                     "core.splitIndex",
                     "feature.manyFiles",
-                    "index.threads"
+                    "index.threads",
+                    "user.name",
+                    "user.email",
             )
         }
     }
