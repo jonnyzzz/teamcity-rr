@@ -33,7 +33,7 @@ class GitRunner(
             )
         }
 
-        if (command == "push") {
+        if (command == "push" || command == "fetch") {
             println("Git push took: ${Duration.ofMillis(time).seconds} seconds")
         }
 
