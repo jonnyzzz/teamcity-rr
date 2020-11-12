@@ -50,16 +50,28 @@ abstract class CommandBase {
         }
 
         fun getBranchFromArgs(branches: Map<String, String>): Pair<String, String> {
-            return findBranchFromArgs(branches)
-                    ?: throw UserErrorException("Failed to select unique branch for the command")
+            val allBranches = findAllBranchFromArgs(branches)
+            return allBranches.singleOrNull()
+                    ?: throw UserErrorException("Failed to select unique branch for the command, candidates were: ${allBranches.keys.joinToString(", ")}")
         }
 
+        private fun <K,V> Map<K,V>.singleOrNull() = entries.singleOrNull()?.let { it.key to it.value }
+
         fun findBranchFromArgs(branches: Map<String, String>): Pair<String, String>? {
+            return findAllBranchFromArgs(branches).singleOrNull()
+        }
+
+        private fun findAllBranchFromArgs(branches: Map<String, String>): Map<String, String> {
             val preciseNames = args.filter { it.startsWith("=") || it.endsWith("=") }.map { it.trim('=') }
-            val (branch, commit) = branches.entries.singleOrNull { (branch) ->
+            val matches = branches.entries.filter { (branch) ->
                 args.any { branch.contains(it, ignoreCase = true) } || branch in preciseNames
-            } ?: return null
-            return branch to commit
+            }.map { it.key to it.value }.toMutableList()
+
+            if ("HEAD" in args) {
+                matches += snapshot.headBranch to snapshot.headCommit
+            }
+
+            return matches.toMap().toSortedMap()
         }
     }
 
