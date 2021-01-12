@@ -19,13 +19,22 @@ private inline fun <reified Y> typeRef() = object : TypeReference<Y>() {}
 class TheHistory {
     private val om = jacksonObjectMapper()
     private val cacheLocation by lazy { DiskCaches.branchesCacheDir }
-    private val rebaseFailedFile by lazy { cacheLocation / "rebase-failed-commits.txt" }
+    private val rebaseFailedBranchesFile by lazy { cacheLocation / "rebase-failed-branch.txt" }
+    private val rebaseFailedCommitsFile by lazy { cacheLocation / "rebase-failed-commits.txt" }
     private val snapshotFile by lazy { cacheLocation / "state.json" }
     private fun branchForCommitsFile(branch: String) = cacheLocation / "branch-commits-" + branch.replace(Regex("[^\\w\\d\\-]+"), "-") + ".txt"
     private fun branchForSafePushesFile(branch: String) = cacheLocation / "branch-safe-push-" + branch.replace(Regex("[^\\w\\d\\-]+"), "-") + ".txt"
 
-    private val brokenForRebase by lazy {
-        runCatching { rebaseFailedFile.readText() }.getOrElse { "" }
+    private val brokenForRebaseCommits by lazy {
+        runCatching { rebaseFailedCommitsFile.readText() }.getOrElse { "" }
+                .splitToSequence("\n")
+                .map { it.trim() }
+                .filter { it.isNotBlank() }
+                .toCollection(TreeSet())
+    }
+
+    private val brokenForRebaseBranches by lazy {
+        runCatching { rebaseFailedBranchesFile.readText() }.getOrElse { "" }
                 .splitToSequence("\n")
                 .map { it.trim() }
                 .filter { it.isNotBlank() }
@@ -69,22 +78,29 @@ class TheHistory {
     }
 
     @Synchronized
-    fun isBrokenForRebase(commitId: String) = commitId in brokenForRebase
+    fun isBrokenForRebase(commitId: String?, branch: String?) =
+        (commitId != null && commitId in brokenForRebaseCommits) || (branch != null && branch in brokenForRebaseBranches)
 
-    @Synchronized
-    fun logRebaseFailed(commitId: String) {
-        if (brokenForRebase.add(commitId)) {
-            rebaseFailedFile.parentFile?.mkdirs()
-            rebaseFailedFile.writeText(brokenForRebase.joinToString("\n"))
-        }
+    private fun writeBrokenRebaseFiles() {
+        rebaseFailedCommitsFile.parentFile?.mkdirs()
+        rebaseFailedCommitsFile.writeText(brokenForRebaseCommits.joinToString("\n"))
+
+        rebaseFailedBranchesFile.parentFile?.mkdirs()
+        rebaseFailedBranchesFile.writeText(brokenForRebaseBranches.joinToString("\n"))
     }
 
     @Synchronized
-    fun removeRebaseFailed(commitId: String) {
-        if (brokenForRebase.remove(commitId)) {
-            rebaseFailedFile.parentFile?.mkdirs()
-            rebaseFailedFile.writeText(brokenForRebase.joinToString("\n"))
-        }
+    fun logRebaseFailed(commitId: String?, branch: String?) {
+        commitId?.let { brokenForRebaseCommits.add(commitId) }
+        branch?.let { brokenForRebaseBranches.add(branch) }
+        writeBrokenRebaseFiles()
+    }
+
+    @Synchronized
+    fun removeRebaseFailed(commitId: String?, branch: String?) {
+        commitId?.let { brokenForRebaseCommits.remove(commitId) }
+        branch?.let { brokenForRebaseBranches.remove(branch) }
+        writeBrokenRebaseFiles()
     }
 
     fun updateCommitsFor(branch: String, uniqueCommits: List<CommitInfo>) {
@@ -111,7 +127,7 @@ class TheHistory {
 
     fun branchRemoved(branch: String, commit: String) {
         branchForCommitsFile(branch).delete()
-        removeRebaseFailed(commit)
+        removeRebaseFailed(commit, branch)
         branchForSafePushesFile(branch).delete()
     }
 }

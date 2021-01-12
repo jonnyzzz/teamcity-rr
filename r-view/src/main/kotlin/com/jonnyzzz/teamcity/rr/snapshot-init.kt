@@ -14,6 +14,11 @@ fun computeLightSnapshot(defaultGit: GitRunner): LightSnapshot {
     )
 }
 
+class RepositoryBranchInfo(
+    val branch: String,
+    val commit: String,
+)
+
 fun computeCurrentStatus(
         defaultGit: GitRunner,
         history: TheHistory,
@@ -31,11 +36,16 @@ fun computeCurrentStatus(
                 //TODO: use defaultBranchPrefix as the prefix here (it may break other logic)
                 .map { it.removePrefix("refs/heads/") }
                 .toSortedSet()
-                .associateWith { defaultGit.gitHeadCommit(it) }
-                .toSortedMap()
+                .map { branch ->
+                    val commitId = defaultGit.gitHeadCommit(branch)
+                    RepositoryBranchInfo(
+                        commit = commitId,
+                        branch = branch,
+                    )
+                }
     }
 
-    val recentMasterCommits by lazy {
+    val recentMasterCommits: Map<String, CommitInfo> by lazy {
         defaultGit
                 .listGitCommitsEx(masterCommit, commits = 2048)
                 .associateBy { it.commitId }
@@ -63,8 +73,20 @@ fun computeCurrentStatus(
     if (doRebase) {
         var didRebase = false
 
-        for ((branch, commit) in branches) {
-            if (history.isBrokenForRebase(commit)) continue
+        for (branchInfo in branches) {
+            val commit = branchInfo.commit
+            val branch = branchInfo.branch
+
+            if (history.isBrokenForRebase(commit, branch)) continue
+
+            val maxDistance = 128
+            val branchCommits = defaultGit.listGitCommits(commit, commits = maxDistance + 12)
+            val distanceToMaster = branchCommits.withIndex().firstOrNull { (_, commit: String) -> commit in recentMasterCommits }?.index
+
+            if (distanceToMaster == null || distanceToMaster > maxDistance) {
+                println("Branch $branch is more than $maxDistance commits away from the `master`: $distanceToMaster. Automatic rebase will not run.")
+                continue
+            }
 
             didRebase = true
             printWithHighlighting { "Rebasing " + bold(branch) + "..." }
@@ -76,7 +98,7 @@ fun computeCurrentStatus(
             )
 
             if (rebaseResult == null) {
-                history.logRebaseFailed(commit)
+                history.logRebaseFailed(commit, branch = null)
             }
         }
 
@@ -98,20 +120,23 @@ fun computeCurrentStatus(
 private fun computeCurrentStatusStatic(defaultGit: GitRunner,
                                        history: TheHistory,
                                        masterCommit: String,
-                                       branches: Map<String, String>,
+                                       branches: List<RepositoryBranchInfo>,
                                        recentMasterCommits: Map<String, CommitInfo>): GitSnapshot {
 
     val alreadyMergedBranches = TreeMap<String, String>()
     val rebaseFailedBranches = TreeMap<String, String>()
     val pendingBranches = TreeMap<String, String>()
 
-    for ((branch, commit) in branches) {
+    for (branchInfo in branches) {
+        val commit = branchInfo.commit
+        val branch = branchInfo.branch
+
         if (commit == masterCommit) {
             alreadyMergedBranches += branch to commit
             continue
         }
 
-        if (history.isBrokenForRebase(commit)) {
+        if (history.isBrokenForRebase(commit, branch)) {
             rebaseFailedBranches += branch to commit
             continue
         }
