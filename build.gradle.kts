@@ -3,7 +3,7 @@
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
-  kotlin("jvm") version "1.4.10"
+  kotlin("jvm") version "1.4.20"
   id("de.undercouch.download") version "4.0.4"
   application
 }
