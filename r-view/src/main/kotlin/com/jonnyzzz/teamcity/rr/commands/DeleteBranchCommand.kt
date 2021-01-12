@@ -46,7 +46,13 @@ object ResetBranchCommand : SnapshotCommandBase() {
 
         printWithHighlighting {
             "The branch " + bold(branch) + " was reset \n\n" +
-                    "To restore it use the commit " + underline(commit)
+                    "To restore it use the commit " + underline(commit) +
+
+                    if (commit in snapshot.masterCommits) {
+                        "  (commit is not unique, it is pushed to master)"
+                    } else {
+                        "  (commit is UNIQUE)"
+                    }
         }
 
         history.branchRemoved(branch, commit)
