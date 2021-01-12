@@ -29,7 +29,7 @@ application {
 
 val installRoot = File(rootProject.projectDir, "production/r-view")
 
-val installToOs by tasks.creating(Copy::class.java) {
+val installToOs by tasks.creating(Sync::class.java) {
     dependsOn(tasks.distZip)
     group = "distribution"
     from({ zipTree(tasks.distZip.get().archiveFile) })
