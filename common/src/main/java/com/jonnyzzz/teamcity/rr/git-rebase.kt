@@ -30,22 +30,22 @@ fun GitRunner.gitRebase(branch: String, toHead: String, isIncludedInHead: (Strin
         return GitRebaseResult(targetCommit)
     }
 
-    val rebaseResult = GitWorktreeBase(this).use {
+    val rebaseResult = this.withMirrorCheckout(targetCommit) {
         val tempBranchName = "auto-rebase-${branchCommit.take(8)}-to-${targetCommit.take(8)}-${System.currentTimeMillis()}"
 
         execGit(WithInheritSuccessfully, timeout = Duration.ofMinutes(15),
                 command = "checkout", args = listOf("-b", tempBranchName, branchCommit))
 
-        val rebaseResult = runRebaseAndHandleConflicts(targetCommit) ?: return null
+        val rebaseResult = runRebaseAndHandleConflicts(targetCommit) ?: return@withMirrorCheckout null
 
         val rebasedCommit = rebaseResult.newCommitId
         this@gitRebase.execGit(WithInheritSuccessfully,
                 timeout = Duration.ofSeconds(5),
                 command = "fetch",
-                args = listOf(this@use.gitDir.toString(), rebasedCommit))
+                args = listOf(gitDir.toString(), rebasedCommit))
 
         rebaseResult
-    }
+    } ?: return null
 
     updateRef(fullBranchName, rebaseResult.newCommitId)
     return rebaseResult
