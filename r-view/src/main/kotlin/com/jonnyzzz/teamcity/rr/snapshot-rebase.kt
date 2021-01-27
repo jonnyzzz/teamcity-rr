@@ -31,6 +31,7 @@ class SnapshotRebaseDriver(
         val distanceToMaster = branchCommits.withIndex().firstOrNull { (_, commit: String) -> commit in recentMasterCommits }?.index
         if (distanceToMaster == null || distanceToMaster > maxDistance) {
             println("Branch $branch is more than $maxDistance commits away from the `master`: $distanceToMaster. Automatic rebase will not run.")
+            history.logRebaseFailed(commit, branch = null)
             return null
         }
 

@@ -31,7 +31,8 @@ private fun theMain(allArgs: List<String>) {
 
     if (allArgs.isEmpty()) {
         println("Please select command:")
-        println("  up[date] [branch] [--no-fetch]          --- fetch, rebase, show the current state")
+        println("  up[date] [branch]                       --- fetch, rebase, show the current state")
+        println("  sync                                    --- creates local branches for personal remote branches")
         println("  show [branch]                           --- shows current status, if possible")
         println("  push <branch> all                       --- starts a safe-push build with all tests, push the branch")
         println("  push <branch> compile                   --- starts a safe-push build with compile, push the branch")
@@ -58,6 +59,7 @@ private fun theMain(allArgs: List<String>) {
         "delete" -> DeleteBranchCommand.doTheCommand(args)
         "reset" -> ResetBranchCommand.doTheCommand(args)
         "new" -> NewBranchCommand.doTheCommand(args)
+        "sync" -> SyncRemoteBranches.doTheCommand(args)
         else -> throw UserErrorException("Unknown command: $cmd")
     }
 }

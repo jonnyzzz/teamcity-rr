@@ -3,7 +3,7 @@ package com.jonnyzzz.teamcity.rr
 import java.time.Duration
 
 
-fun computeSnapshotFetch(defaultGit: GitRunner) {
+fun computeSnapshotFetch(defaultGit: GitRunner, vararg spec: String) {
     printProgress("Fetching changes from remote...")
     defaultGit.execGit(WithInheritSuccessfully, timeout = Duration.ofMinutes(10),
             command = "fetch",
@@ -11,5 +11,6 @@ fun computeSnapshotFetch(defaultGit: GitRunner) {
                     "--prune", "--no-tags", "--keep",
                     "origin",
                     "refs/heads/master:refs/remotes/origin/master",
+                    *spec
             ))
 }

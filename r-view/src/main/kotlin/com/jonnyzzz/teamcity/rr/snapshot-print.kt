@@ -2,26 +2,41 @@ package com.jonnyzzz.teamcity.rr
 
 fun GitSnapshot.showSnapshot() {
     println()
-    if (alreadyMergedBranches.isNotEmpty()) {
-        println("Already completed and merged branches:")
-        for ((branch, _) in alreadyMergedBranches) {
-            println(formatBranchWithInfo(branch))
+
+    if (rebaseFailedBranches.isNotEmpty()) {
+        val text = buildString {
+            appendLine("Rebase failed/disabled for branches:")
+            for ((branch, _) in rebaseFailedBranches) {
+                appendLine("  $branch")
+            }
+            appendLine()
         }
-        println()
+        printWithHighlighting { dim(text) }
     }
 
+    println()
+    println()
+    println()
+
     if (pendingBranches.isNotEmpty()) {
-        println("Pending branches:")
+        printWithHighlighting {
+            yellow(bold(underline("Pending branches:")))
+        }
+
         for ((branch, _) in pendingBranches) {
             println(formatBranchWithInfo(branch))
         }
         println()
+        println()
     }
 
-    if (rebaseFailedBranches.isNotEmpty()) {
-        println("Rebase failed/disabled for branches:")
-        for ((branch, _) in rebaseFailedBranches) {
-            println("  $branch")
+    if (alreadyMergedBranches.isNotEmpty()) {
+        printWithHighlighting {
+            green(bold(underline("Already completed and merged branches:")))
+        }
+        println()
+        for ((branch, _) in alreadyMergedBranches) {
+            println(formatBranchWithInfo(branch))
         }
         println()
     }

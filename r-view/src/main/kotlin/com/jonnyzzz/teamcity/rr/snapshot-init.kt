@@ -3,7 +3,9 @@ package com.jonnyzzz.teamcity.rr
 import java.util.*
 
 
-const val defaultBranchPrefix = "refs/heads/jonnyzzz/"  //TODO: configuration?
+const val defaultBranchPrefix = "refs/heads/jonnyzzz/"                  //TODO: configuration?
+const val defaultRemoteBranchPrefix = "refs/remotes/origin/jonnyzzz/"   //TODO: configuration?
+const val defaultFetchSpec = "$defaultBranchPrefix*:$defaultRemoteBranchPrefix*"
 
 fun computeLightSnapshot(defaultGit: GitRunner): LightSnapshot {
     return LightSnapshot(
