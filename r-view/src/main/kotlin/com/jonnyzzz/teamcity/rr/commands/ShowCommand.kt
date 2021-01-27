@@ -3,13 +3,13 @@ package com.jonnyzzz.teamcity.rr.commands
 import com.jonnyzzz.teamcity.rr.*
 import com.jonnyzzz.teamcity.rr.commands.CommandBase.Session
 
-object UpdateCommand : CommandBase() {
+object UpdateCommand : SnapshotUpdatingCommandBase() {
     override fun Session.doTheCommandImpl() {
         showCommand()
     }
 }
 
-object ShowCommand : SnapshotCommandBase() {
+object ShowCommand : SnapshotCacheCommandBase() {
     override fun Session.doTheCommandImpl() {
         showCommand()
     }

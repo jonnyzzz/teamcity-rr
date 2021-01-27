@@ -3,10 +3,8 @@ package com.jonnyzzz.teamcity.rr.commands
 import com.jonnyzzz.teamcity.rr.*
 import java.time.Duration
 
-object SafePushCommand : CommandBase() {
-    override fun Session.doTheCommandImpl() {
-        val (branch, commit) = getBranchFromArgs(snapshot.pendingBranches)
-
+object SafePushCommand : SnapshotOneBranchUpdatingCommandBase() {
+    override fun Session.doTheCommandForBranch(branch: String, commit: String) {
         val mode = run {
             val lowerCaseArgs = args.map { it.toLowerCase() }
             when {
@@ -42,7 +40,5 @@ object SafePushCommand : CommandBase() {
                 commitId = commit,
                 mode = mode,
         ))
-
-        history.invalidateSnapshot()
     }
 }

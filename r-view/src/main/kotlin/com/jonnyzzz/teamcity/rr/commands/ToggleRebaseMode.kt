@@ -3,10 +3,7 @@ package com.jonnyzzz.teamcity.rr.commands
 import com.jonnyzzz.teamcity.rr.UserErrorException
 import com.jonnyzzz.teamcity.rr.printFinalMessage
 
-object ToggleRebaseMode : CommandBase() {
-    override fun runRebase(args: List<String>): Boolean = false
-    override fun runFetch(args: List<String>): Boolean = false
-
+object ToggleRebaseMode : SnapshotCacheCommandBase() {
     override fun Session.doTheCommandImpl() {
         when {
             "disable" in args -> {

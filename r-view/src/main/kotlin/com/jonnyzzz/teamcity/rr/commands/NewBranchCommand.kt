@@ -3,7 +3,7 @@ package com.jonnyzzz.teamcity.rr.commands
 import com.jonnyzzz.teamcity.rr.*
 import java.time.Duration
 
-object NewBranchCommand : SnapshotCommandBase() {
+object NewBranchCommand : SnapshotCacheCommandBase() {
     override fun Session.doTheCommandImpl() {
         val branchName = args.singleOrNull { !it.startsWith("-") }
                 ?: throw UserErrorException("Branch is not specified in arguments")

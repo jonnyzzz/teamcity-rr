@@ -6,7 +6,7 @@ import com.jonnyzzz.teamcity.rr.WithInheritSuccessfully
 import com.jonnyzzz.teamcity.rr.printWithHighlighting
 import java.time.Duration
 
-object DeleteBranchCommand : SnapshotCommandBase() {
+object DeleteBranchCommand : SnapshotCacheCommandBase() {
     override fun Session.doTheCommandImpl() {
         val (branch, commit) = getBranchFromArgs(snapshot.allBranches)
 
@@ -31,7 +31,7 @@ object DeleteBranchCommand : SnapshotCommandBase() {
     }
 }
 
-object ResetBranchCommand : SnapshotCommandBase() {
+object ResetBranchCommand : SnapshotCacheCommandBase() {
     override fun Session.doTheCommandImpl() {
         val (branch, commit) = getBranchFromArgs(snapshot.allBranches)
 
