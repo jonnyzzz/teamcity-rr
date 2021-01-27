@@ -40,12 +40,24 @@ val installToOs by tasks.creating(Sync::class.java) {
 
     doLast {
         val javaHome = File(System.getProperty("java.home")).canonicalPath
-        val script = File("/usr/local/bin/r-view")
 
-        script.writeText("#!/bin/bash\nexport JAVA_HOME='$javaHome'\n$installRoot/bin/${application.applicationName} \"$@\"")
-        script.setExecutable(true)
+        if (System.getProperty("os.name").contains("windows", ignoreCase = true)) {
+            val script = File("c:\\tools\\r-view.bat")
 
-        File(installRoot, "version.txt").writeText(Date().toString())
+            script.writeText("" +
+                    "set JAVA_HOME=$javaHome\r\n" +
+                    "\"${File(installRoot, "bin/${application.applicationName}.bat").canonicalPath}\" %*")
+
+            File(installRoot, "version.txt").writeText(Date().toString())
+
+        } else {
+            val script = File("/usr/local/bin/r-view")
+
+            script.writeText("#!/bin/bash\nexport JAVA_HOME='$javaHome'\n$installRoot/bin/${application.applicationName} \"$@\"")
+            script.setExecutable(true)
+
+            File(installRoot, "version.txt").writeText(Date().toString())
+        }
     }
 }
 

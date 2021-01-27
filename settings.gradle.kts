@@ -9,6 +9,7 @@ if (!restClient.isDirectory) {
     println("TeamCity Rest Client is missing, please checkout the ")
     println("https://github.com/jonnyzzz/teamcity-rest-client")
     println("and use the `teamcity-rr` branch")
+    println(restClient)
     println()
     println()
     error("See above")
