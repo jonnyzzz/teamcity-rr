@@ -108,5 +108,11 @@ private class GitWorktreeBase(
         val currentBranch = tempGit.listGitCurrentBranchName()
         val branchesToDrop = tempGit.listGitBranches().filter { it != currentBranch }
         tempGit.execGit(WithNoOutput, timeout = Duration.ofMinutes(15), command = "branch", args = listOf("-D") + branchesToDrop)
+
+        //at that point the repo has to be on a commit from the alternates,
+        //thus objects is OK to be removed (it's cheaper to kill files, not GC)
+        (tempGit.gitDir / "objects").listFiles()
+            ?.filter { it.isDirectory && it.name.length == 2 }
+            ?.forEach { it.deleteRecursively() }
     }
 }
