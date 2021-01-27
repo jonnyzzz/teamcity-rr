@@ -87,8 +87,7 @@ private class GitWorktreeBase(
         }
     }
 
-    fun <Y> use(commitToSet: String,
-                action: GitRunner.() -> Y): Y {
+    fun <Y> use(commitToSet: String, action: GitRunner.() -> Y): Y {
         initWorktreeIfNeeded()
         recoverTempGit(commitToSet)
         try {
@@ -104,5 +103,10 @@ private class GitWorktreeBase(
         tempGit.execGit(WithNoOutput, timeout = Duration.ofMinutes(15), command = "cherry-pick", args = listOf("--abort"))
         tempGit.execGit(WithNoOutput, timeout = Duration.ofMinutes(15), command = "merge", args = listOf("--abort"))
         tempGit.execGit(WithNoOutput, timeout = Duration.ofMinutes(15), command = "reset", args = listOf("--hard", commitToSet))
+
+        //cleanup stale branches
+        val currentBranch = tempGit.listGitCurrentBranchName()
+        val branchesToDrop = tempGit.listGitBranches().filter { it != currentBranch }
+        tempGit.execGit(WithNoOutput, timeout = Duration.ofMinutes(15), command = "branch", args = listOf("-D") + branchesToDrop)
     }
 }

@@ -46,7 +46,7 @@ fun GitRunner.gitRebase(branch: String, toHead: String, isIncludedInHead: (Strin
 }
 
 private fun GitRunner.smartUpdateRef(branch: String, targetCommit: String) {
-    if (listGitCurrentBranchName("HEAD") == listGitCurrentBranchName(branch)) {
+    if (listGitCurrentBranchName() == listGitCurrentBranchName(branch)) {
         doUnderStash {
             execGit(
                 WithInheritSuccessfully, timeout = Duration.ofMinutes(5),

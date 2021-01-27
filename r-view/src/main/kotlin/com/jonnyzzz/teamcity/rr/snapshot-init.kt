@@ -9,7 +9,7 @@ fun computeLightSnapshot(defaultGit: GitRunner): LightSnapshot {
     return LightSnapshot(
             masterCommit = defaultGit.gitHeadCommit("origin/master"),
             headCommit = defaultGit.gitHeadCommit("HEAD"),
-            headBranch = defaultGit.listGitCurrentBranchName("HEAD").removePrefix("refs/heads/"),
+            headBranch = defaultGit.listGitCurrentBranchName().removePrefix("refs/heads/"),
     )
 }
 
