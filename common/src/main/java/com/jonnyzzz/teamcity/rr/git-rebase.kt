@@ -14,19 +14,13 @@ fun GitRunner.gitRebase(branch: String, toHead: String, isIncludedInHead: (Strin
         return GitRebaseResult(targetCommit)
     }
 
-    if (listGitCurrentBranchName("HEAD") == listGitCurrentBranchName(branch)) {
-        doUnderStash {
-            return runRebaseAndHandleConflicts(targetCommit)
-        }
-    }
-
     val fullBranchName = "refs/heads/" + branch.removePrefix("refs/heads")
 
     // if the branch is on a commit reachable from toHead,
     // means it is possible to just move the reference, as
     // there is no new changes done by us
     if (isIncludedInHead(branchCommit)) {
-        updateRef(fullBranchName, targetCommit)
+        smartUpdateRef(fullBranchName, targetCommit)
         return GitRebaseResult(targetCommit)
     }
 
@@ -40,20 +34,31 @@ fun GitRunner.gitRebase(branch: String, toHead: String, isIncludedInHead: (Strin
 
         val rebasedCommit = rebaseResult.newCommitId
         this@gitRebase.execGit(WithInheritSuccessfully,
-                timeout = Duration.ofSeconds(5),
+                timeout = Duration.ofSeconds(15),
                 command = "fetch",
                 args = listOf(gitDir.toString(), rebasedCommit))
 
         rebaseResult
     } ?: return null
 
-    updateRef(fullBranchName, rebaseResult.newCommitId)
+    smartUpdateRef(fullBranchName, rebaseResult.newCommitId)
     return rebaseResult
 }
 
-fun GitRunner.updateRef(fullBranchName: String, targetCommit: String) {
-    execGit(WithInheritSuccessfully, timeout = Duration.ofMinutes(1),
-            command = "update-ref", args = listOf(fullBranchName, targetCommit, "-m", "r-view rebase"))
+private fun GitRunner.smartUpdateRef(branch: String, targetCommit: String) {
+    if (listGitCurrentBranchName("HEAD") == listGitCurrentBranchName(branch)) {
+        doUnderStash {
+            execGit(
+                WithInheritSuccessfully, timeout = Duration.ofMinutes(5),
+                command = "reset", args = listOf("--hard", targetCommit)
+            )
+        }
+    } else {
+        execGit(
+            WithInheritSuccessfully, timeout = Duration.ofMinutes(1),
+            command = "update-ref", args = listOf(branch, targetCommit, "-m", "r-view rebase")
+        )
+    }
 }
 
 private fun GitRunner.runRebaseAndHandleConflicts(targetCommit: String): GitRebaseResult? {
