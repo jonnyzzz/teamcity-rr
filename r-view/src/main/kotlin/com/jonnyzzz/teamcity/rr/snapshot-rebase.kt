@@ -6,26 +6,29 @@ class SnapshotRebaseDriver(
         private val history: TheHistory,
 ) {
     private val masterCommit by lazy { computeSnapshotMasterCommit(defaultGit) }
-    private val recentMasterCommits by lazy { computeSnapshotRecentMasterCommits(defaultGit, masterCommit = masterCommit) }
+    private val recentMasterCommits by lazy { defaultGit.listGitCommits(masterCommit).toSet() }
 
     fun rebaseAll() {
         for (branchInfo in computeSnapshotBranches(defaultGit)) {
             val commit = branchInfo.commit
             val branch = branchInfo.branch
 
+            if (history.isBrokenForRebase(commit, branch)) continue
+
             rebaseBranch(branch, commit)
         }
     }
 
     fun rebaseBranch(branch: String, commit: String): GitRebaseResult? {
-        if (history.isBrokenForRebase(commit, branch)) return null
+        printWithHighlighting { "Rebasing " + bold(branch) + "..." }
 
         val maxDistance = 128
         val branchCommits = defaultGit.listGitCommits(commit, commits = maxDistance + 12)
 
         if (masterCommit in branchCommits) {
+            println("Branch $branch already contains the commit from master head. No rebase.")
             // there is no need to rebase - the branch is up-to-date
-            return null
+            return GitRebaseResult(commit)
         }
 
         val distanceToMaster = branchCommits.withIndex().firstOrNull { (_, commit: String) -> commit in recentMasterCommits }?.index
@@ -35,8 +38,6 @@ class SnapshotRebaseDriver(
             return null
         }
 
-        printWithHighlighting { "Rebasing " + bold(branch) + "..." }
-
         val rebaseResult = defaultGit.gitRebase(
                 branch = branch,
                 toHead = masterCommit,
@@ -44,9 +45,13 @@ class SnapshotRebaseDriver(
         )
 
         if (rebaseResult == null) {
+            println("Branch $branch rebase failed. Auto-rebase is disabled for it. No rebase.")
             history.logRebaseFailed(commit, branch = null)
+            return null
         }
 
+        history.removeRebaseFailed(commit, branch)
+        history.removeRebaseFailed(rebaseResult.newCommitId, branch)
         return rebaseResult
     }
 }

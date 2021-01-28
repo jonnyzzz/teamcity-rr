@@ -48,16 +48,19 @@ fun CommandBase.Session.findBranchFromArgs(branches: Map<String, String>): Pair<
 }
 
 private fun CommandBase.Session.findAllBranchFromArgs(branches: Map<String, String>): Map<String, String> {
-    val preciseNames = args.filter { it.startsWith("=") || it.endsWith("=") }.map { it.trim('=') }
-    val matches = branches.entries.filter { (branch) ->
-        args.any { branch.contains(it, ignoreCase = true) } || branch in preciseNames
-    }.map { it.key to it.value }.toMutableList()
-
     if ("HEAD" in args) {
-        matches += snapshot.headBranch to snapshot.headCommit
+        return mapOf(snapshot.headBranch to snapshot.headCommit)
     }
 
-    return matches.toMap().toSortedMap()
+    val preciseNames = args.filter { it.startsWith("=") || it.endsWith("=") }.map { it.trim('=') }
+    if (preciseNames.isNotEmpty()) {
+        return branches.entries.filter { (branch) -> branch in preciseNames }
+                .map { it.key to it.value }.toMap().toSortedMap()
+    }
+
+    return branches.entries
+            .filter { (branch) -> args.any { branch.contains(it, ignoreCase = true) } }
+            .map { it.key to it.value }.toMap().toSortedMap()
 }
 
 abstract class SnapshotCacheCommandBase : CommandBase() {
@@ -81,15 +84,24 @@ abstract class SnapshotUpdatingCommandBase : CommandBase() {
 
 abstract class SnapshotOneBranchUpdatingCommandBase : CommandBase() {
     final override fun doTheCommand(args: List<String>) {
-        val session = Session(args)
-        val (branch, commit) = session.getBranchFromArgs(session.snapshot.pendingBranches)
+        run {
+            val (branch, commit) = Session(args).run { getBranchFromArgs(snapshot.pendingBranches) }
 
-        computeSnapshotFetch(defaultGit)
-        SnapshotRebaseDriver(defaultGit, history).rebaseBranch(branch, commit)
+            computeSnapshotFetch(defaultGit)
+            val rebaseResult = SnapshotRebaseDriver(defaultGit, history).rebaseBranch(branch, commit)
+            if (rebaseResult == null) {
+                printWithHighlighting { bold("Rebase failed. Push will not run.") }
+                throw UserErrorException("Rebase failed for branch $branch")
+            }
 
-        history.invalidateSnapshot()
-        Session(args).doTheCommandForBranch(branch, commit)
-        history.invalidateSnapshot()
+            history.invalidateSnapshot()
+        }
+
+        run {
+            val (branch, commit) = Session(args).run { getBranchFromArgs(snapshot.pendingBranches) }
+            Session(args).doTheCommandForBranch(branch, commit)
+            history.invalidateSnapshot()
+        }
     }
 
     abstract fun Session.doTheCommandForBranch(branch: String, commit: String)

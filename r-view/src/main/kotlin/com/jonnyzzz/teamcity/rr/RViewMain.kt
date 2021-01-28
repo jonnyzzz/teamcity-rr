@@ -38,6 +38,7 @@ private fun theMain(allArgs: List<String>) {
         println("  push <branch> compile                   --- starts a safe-push build with compile, push the branch")
         println("  push <branch> [local]                   --- push the branch")
         println("  push-now-master <branch>                --- rebase & push current branch to master")
+        println("  rebase <branch>                         --- rebase a branch, ignoring auto-rebase option")
         println()
         println("  auto-rebase <branch> [enable|disable]   --- enabled or disabled a branch from rebase")
         println("  delete <branch>                         --- removes local and remote branch")
@@ -60,6 +61,7 @@ private fun theMain(allArgs: List<String>) {
         "reset" -> ResetBranchCommand.doTheCommand(args)
         "new" -> NewBranchCommand.doTheCommand(args)
         "sync" -> SyncRemoteBranches.doTheCommand(args)
+        "rebase" -> RebaseBranchToMasterCommand.doTheCommand(args)
         else -> throw UserErrorException("Unknown command: $cmd")
     }
 }

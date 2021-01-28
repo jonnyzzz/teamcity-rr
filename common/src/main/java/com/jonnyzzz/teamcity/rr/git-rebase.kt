@@ -33,7 +33,7 @@ fun GitRunner.gitRebase(branch: String, toHead: String, isIncludedInHead: (Strin
         val rebaseResult = runRebaseAndHandleConflicts(targetCommit) ?: return@withMirrorCheckout null
 
         val rebasedCommit = rebaseResult.newCommitId
-        this@gitRebase.execGit(WithInheritSuccessfully,
+        this@gitRebase.execGit(WithNoOutputSuccessfully,
                 timeout = Duration.ofSeconds(15),
                 command = "fetch",
                 args = listOf(gitDir.toString(), rebasedCommit))
@@ -69,7 +69,12 @@ private fun GitRunner.runRebaseAndHandleConflicts(targetCommit: String): GitReba
         return gitHeadCommit("HEAD").let(::GitRebaseResult)
     }
 
-    execGit(WithInheritSuccessfully, timeout = Duration.ofMinutes(15), command = "rebase", args = listOf("--abort"))
+    println("Rebase failed: ")
+    println(code.stdout)
+    println()
+    println(code.stderr)
+    println()
+
     return null
 }
 
