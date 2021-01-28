@@ -17,9 +17,12 @@ val entryClassName = "com.jonnyzzz.teamcity.rr.RViewMain"
 val runShowCommand by tasks.creating(JavaExec::class.java) {
     classpath = sourceSets.getByName("main").runtimeClasspath
     main = entryClassName
-    args = listOf("show")
+    args = listOf("rebase", "indexes-split2")
     enableAssertions = true
-    workingDir = File("/Users/jonnyzzz/Work/intellij")
+    workingDir = when {
+        System.getProperty("os.name").contains("winsows", ignoreCase = true) -> File("c:\\Work/intellij").canonicalFile
+        else -> File("/Users/jonnyzzz/Work/intellij")
+    }
 }
 
 application {
