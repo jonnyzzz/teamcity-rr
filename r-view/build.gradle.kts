@@ -11,6 +11,9 @@ dependencies {
     implementation("com.github.ajalt:mordant:1.2.1")
     implementation(kotlin("stdlib-jdk8"))
     implementation(kotlin("reflect"))
+
+    implementation("net.java.dev.jna:jna:5.6.0")
+    implementation("net.java.dev.jna:jna-platform:5.6.0")
 }
 
 val entryClassName = "com.jonnyzzz.teamcity.rr.RViewMain"

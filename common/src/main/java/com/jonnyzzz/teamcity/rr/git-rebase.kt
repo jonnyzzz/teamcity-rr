@@ -48,6 +48,8 @@ fun GitRunner.gitRebase(branch: String, toHead: String, isIncludedInHead: (Strin
 private fun GitRunner.smartUpdateRef(branch: String, targetCommit: String) {
     if (listGitCurrentBranchName() == listGitCurrentBranchName(branch)) {
         doUnderStash {
+            //theoretically, we may do rebase here instead of hard reset,
+            //the current approach may leak some files along the way
             execGit(
                 WithInheritSuccessfully, timeout = Duration.ofMinutes(5),
                 command = "reset", args = listOf("--hard", targetCommit)

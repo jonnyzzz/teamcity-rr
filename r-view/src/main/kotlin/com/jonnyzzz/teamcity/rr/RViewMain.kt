@@ -39,6 +39,7 @@ private fun theMain(allArgs: List<String>) {
         println("  push <branch> [local]                   --- push the branch")
         println("  push-now-master <branch>                --- rebase & push current branch to master")
         println("  rebase <branch>                         --- rebase a branch, ignoring auto-rebase option")
+        println("  cherry-pick <commits>                   --- runs a cherry-pick including commits order")
         println()
         println("  auto-rebase <branch> [enable|disable]   --- enabled or disabled a branch from rebase")
         println("  delete <branch>                         --- removes local and remote branch")
@@ -62,6 +63,7 @@ private fun theMain(allArgs: List<String>) {
         "new" -> NewBranchCommand.doTheCommand(args)
         "sync" -> SyncRemoteBranches.doTheCommand(args)
         "rebase" -> RebaseBranchToMasterCommand.doTheCommand(args)
+        "cherry-pick" -> CherryPick.doTheCommand(args)
         else -> throw UserErrorException("Unknown command: $cmd")
     }
 }

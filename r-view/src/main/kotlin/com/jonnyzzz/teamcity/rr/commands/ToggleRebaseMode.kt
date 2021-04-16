@@ -7,12 +7,12 @@ object ToggleRebaseMode : SnapshotCacheCommandBase() {
     override fun Session.doTheCommandImpl() {
         when {
             "disable" in args -> {
-                val (branch, commit) = getBranchFromArgs(snapshot.pendingBranches)
+                val (branch, commit) = getBranchFromArgs(snapshot.allBranches)
                 history.logRebaseFailed(commit, branch)
                 printFinalMessage("Branch $branch is disabled for rebase")
             }
             "enable" in args -> {
-                val (branch, commit) = getBranchFromArgs(snapshot.rebaseFailedBranches)
+                val (branch, commit) = getBranchFromArgs(snapshot.allBranches)
                 history.removeRebaseFailed(commit, branch)
                 printFinalMessage("Branch $branch is enabled for rebase")
             }
