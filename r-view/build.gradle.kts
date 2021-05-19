@@ -23,7 +23,7 @@ val runShowCommand by tasks.creating(JavaExec::class.java) {
     args = listOf("rebase", "indexes-split2")
     enableAssertions = true
     workingDir = when {
-        System.getProperty("os.name").contains("winsows", ignoreCase = true) -> File("c:\\Work/intellij").canonicalFile
+        System.getProperty("os.name").contains("windows", ignoreCase = true) -> File("c:\\Work\\intellij").canonicalFile
         else -> File("/Users/jonnyzzz/Work/intellij")
     }
 }

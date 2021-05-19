@@ -63,6 +63,7 @@ private fun theMain(allArgs: List<String>) {
         "new" -> NewBranchCommand.doTheCommand(args)
         "sync" -> SyncRemoteBranches.doTheCommand(args)
         "rebase" -> RebaseBranchToMasterCommand.doTheCommand(args)
+        "history" -> ListHistory.doTheCommand(args)
         "cherry-pick" -> CherryPick.doTheCommand(args)
         else -> throw UserErrorException("Unknown command: $cmd")
     }

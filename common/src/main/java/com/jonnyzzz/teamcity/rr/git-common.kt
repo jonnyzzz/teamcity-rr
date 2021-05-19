@@ -1,6 +1,6 @@
 package com.jonnyzzz.teamcity.rr
 
-import java.time.Duration
+import java.time.*
 import java.util.*
 
 fun GitRunner.checkGitVersion() {
@@ -99,6 +99,9 @@ data class CommitInfo(
         val author: String,
         val subject: String
 ) {
+    val authorDateTime : LocalDateTime
+      get() = LocalDateTime.ofInstant(Instant.ofEpochSecond(authorDate), ZoneOffset.UTC)
+
     override fun hashCode() = Objects.hash(authorDate, author)
 
     override fun equals(other: Any?): Boolean {
@@ -120,7 +123,7 @@ fun GitRunner.listGitCommitsEx(head: String, notIn: String? = null, commits: Int
     val format = blockSep +
                     "%H" +
                     "$dateSep%ad" +
-                    "$authorSep%an" +
+                    "$authorSep%an <%ae>" +
                     "$subjectSep%s"
 
     val text = execGit(
