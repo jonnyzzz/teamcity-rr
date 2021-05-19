@@ -2,7 +2,6 @@ package com.jonnyzzz.teamcity.rr
 
 
 private val refsSafePushPrefix = "refs/safepush"
-private val defaultSafePushBranchPrefix = "$refsSafePushPrefix/Eugene.Petrenko"
 
 enum class SafePushMode(
         val branchNameInfix: String,
@@ -20,7 +19,7 @@ enum class SafePushMode(
     ;
 
     fun safePushBranch(commit: String, targetBranch: String = "master"): String {
-        return "$defaultSafePushBranchPrefix/$targetBranch/r${commit.take(8)}/$branchNameInfix"
+        return "$refsSafePushPrefix/Eugene.Petrenko/r${commit.take(8)}/$targetBranch/$branchNameInfix"
     }
 
     fun teamcityBranchLinkFromBranch(branch: String): String {
