@@ -19,7 +19,7 @@ enum class SafePushMode(
     ;
 
     fun safePushBranch(commit: String, targetBranch: String = "master"): String {
-        return "$refsSafePushPrefix/Eugene.Petrenko/r${commit.take(8)}/$targetBranch/$branchNameInfix"
+        return "$refsSafePushPrefix/Eugene.Petrenko-r${commit.take(8)}/$targetBranch/$branchNameInfix"
     }
 
     fun teamcityBranchLinkFromBranch(branch: String): String {
